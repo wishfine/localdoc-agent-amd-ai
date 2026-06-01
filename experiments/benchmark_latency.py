@@ -64,14 +64,29 @@ TOPICS = [
 ]
 
 
+_PLACEHOLDER_SENTENCES = [
+    "异构计算架构通过组合不同类型的处理单元来优化系统性能。",
+    "CPU 适合复杂控制逻辑和串行任务处理。",
+    "GPU 擅长大规模并行浮点运算和矩阵计算。",
+    "NPU 专为低功耗神经网络推理而设计。",
+    "AMD 锐龙 AI MAX+ 处理器集成了三种计算单元。",
+    "合理的任务调度策略能够最大化异构硬件的利用率。",
+    "本地知识库智能体将文档处理和推理完全放在本地完成。",
+    "向量嵌入技术将文本转换为数值表示用于语义检索。",
+    "余弦相似度是衡量向量方向接近程度的经典方法。",
+    "TF-IDF 通过词频和逆文档频率衡量词语的重要性。",
+    "文本切块策略需要平衡语义完整性和检索粒度。",
+    "异构调度器根据任务计算特征选择最优硬件后端。",
+    "ROCm 是 AMD 的 GPU 计算平台，支持 HIP 编程模型。",
+    "XDNA 架构的 NPU 提供高效的端侧 AI 推理能力。",
+    "统一内存架构使 CPU、GPU、NPU 可以共享系统内存。",
+]
+
+
 def _random_text(min_sentences: int = 3, max_sentences: int = 8) -> str:
-    """Generate a block of random Chinese-style placeholder text."""
-    sentences = []
-    for _ in range(random.randint(min_sentences, max_sentences)):
-        length = random.randint(10, 40)
-        sentence = "".join(random.choices(string.ascii_lowercase + "  ,.", k=length))
-        sentences.append(sentence.capitalize() + ".")
-    return " ".join(sentences)
+    """Generate a block of readable Chinese placeholder text."""
+    n = random.randint(min_sentences, max_sentences)
+    return "".join(random.choices(_PLACEHOLDER_SENTENCES, k=n))
 
 
 # ---------------------------------------------------------------------------

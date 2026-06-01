@@ -191,18 +191,23 @@ def create_app():
     def get_system_info(simulate_npu: bool):
         backend_status = _get_backend_status_report()
 
-        # Schedule report
-        from localdoc.scheduler import HeterogeneousScheduler
-        from localdoc.backends.cpu_backend import CPUBackend
-        backends = {"cpu": CPUBackend()}
-        if simulate_npu:
-            try:
-                from localdoc.backends.simulated_npu import SimulatedNPUBackend
-                backends["npu"] = SimulatedNPUBackend()
-            except ImportError:
-                pass
-        scheduler = HeterogeneousScheduler(backends=backends)
-        schedule_report = _format_schedule_report(scheduler.get_schedule_report())
+        # Use the agent's scheduler if available, otherwise create a fresh one
+        if _agent is not None and _agent.scheduler is not None:
+            schedule_report = _format_schedule_report(
+                _agent.scheduler.get_schedule_report()
+            )
+        else:
+            from localdoc.scheduler import HeterogeneousScheduler
+            from localdoc.backends.cpu_backend import CPUBackend
+            backends = {"cpu": CPUBackend()}
+            if simulate_npu:
+                try:
+                    from localdoc.backends.simulated_npu import SimulatedNPUBackend
+                    backends["npu"] = SimulatedNPUBackend()
+                except ImportError:
+                    pass
+            scheduler = HeterogeneousScheduler(backends=backends)
+            schedule_report = _format_schedule_report(scheduler.get_schedule_report())
 
         agent_stats = ""
         if _agent is not None:

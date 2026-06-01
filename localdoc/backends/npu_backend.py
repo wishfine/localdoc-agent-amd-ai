@@ -106,6 +106,7 @@ class AMDNPUBackend:
         # DmlExecutionProvider：DirectML EP（Windows 上可间接使用 NPU）
         npu_eps = [
             "VitisAIExecutionProvider",
+            "RyzenAIExecutionProvider",
             "DmlExecutionProvider",
         ]
 
@@ -269,7 +270,7 @@ class AMDNPUBackend:
     def generate_answer(
         self,
         query: str,
-        context: List[str],
+        context,
         max_length: int = 512,
     ) -> str:
         """
@@ -280,7 +281,7 @@ class AMDNPUBackend:
 
         Args:
             query: 用户提出的问题
-            context: 上下文文档列表
+            context: 上下文，可以是字符串或字符串列表
             max_length: 答案最大字符数
 
         Returns:
@@ -288,7 +289,15 @@ class AMDNPUBackend:
         """
         self._lazy_init()
 
-        if not context:
+        # 统一处理：将 context 转为字符串列表
+        if isinstance(context, str):
+            context_list = [context]
+        elif isinstance(context, list):
+            context_list = context
+        else:
+            context_list = [str(context)]
+
+        if not context_list or all(not c for c in context_list):
             logger.warning("NPU 后端：未提供上下文，无法生成答案")
             return "抱歉，未找到相关上下文信息，无法回答该问题。"
 
@@ -298,7 +307,7 @@ class AMDNPUBackend:
 
         # 拆分句子
         all_sentences: List[str] = []
-        for doc in context:
+        for doc in context_list:
             sentences = re.split(r'[。！？.!?\n]+', doc)
             for s in sentences:
                 s = s.strip()

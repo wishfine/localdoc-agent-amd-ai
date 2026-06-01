@@ -178,7 +178,7 @@ class SimulatedNPUBackend:
     def generate_answer(
         self,
         query: str,
-        context: List[str],
+        context,
         max_length: int = 512,
     ) -> str:
         """
@@ -187,18 +187,23 @@ class SimulatedNPUBackend:
         实际使用 CPU 进行关键词匹配抽取式问答，
         然后添加人为延迟模拟 NPU 推理。
 
-        !!! 警告：此方法不使用真正的 NPU !!!
-        !!! 输出结果仅为 CPU 关键词匹配结果 !!!
-
         Args:
             query: 用户提出的问题
-            context: 上下文文档列表
+            context: 上下文，可以是字符串或字符串列表
             max_length: 答案最大字符数
 
         Returns:
             str: 生成的答案文本（CPU 关键词匹配结果）
         """
-        if not context:
+        # 统一处理：将 context 转为字符串列表
+        if isinstance(context, str):
+            context_list = [context]
+        elif isinstance(context, list):
+            context_list = context
+        else:
+            context_list = [str(context)]
+
+        if not context_list or all(not c for c in context_list):
             logger.warning("[模拟 NPU] 未提供上下文，无法生成答案")
             return "抱歉，未找到相关上下文信息，无法回答该问题。"
 
@@ -212,7 +217,7 @@ class SimulatedNPUBackend:
 
         # ---------- CPU 关键词匹配 ----------
         all_sentences: List[str] = []
-        for doc in context:
+        for doc in context_list:
             sentences = re.split(r'[。！？.!?\n]+', doc)
             for s in sentences:
                 s = s.strip()

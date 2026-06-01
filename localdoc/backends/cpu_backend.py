@@ -35,7 +35,19 @@ class CPUBackend:
     - 基于关键词匹配的抽取式问答
 
     此后端始终可用，不依赖任何特殊硬件或第三方库。
+
+    TF-IDF 词汇表在 embed_texts 调用间持久化，
+    保证摄入阶段和查询阶段的向量维度一致。
     """
+
+    # ---------- 属性 ----------
+
+    def __init__(self) -> None:
+        # 持久化 TF-IDF 状态：累积语料库和词汇表
+        self._corpus: List[str] = []           # 所有已见过的文本
+        self._vocab: Optional[List[str]] = None  # 当前词汇表
+        self._idf: Optional[List[float]] = None  # 当前 IDF 值
+        self._vocab_index: Optional[dict] = None
 
     # ---------- 属性 ----------
 
@@ -80,31 +92,35 @@ class CPUBackend:
 
     def _build_tfidf(self, texts: List[str]) -> tuple:
         """
-        为一组文本构建 TF-IDF 向量。
+        将新文本加入累积语料库，重建 TF-IDF 词汇表和 IDF 值。
+
+        词汇表只增不减，保证后续调用返回的向量维度 >= 之前调用的维度。
+        对查询文本返回的向量会自动补零对齐到当前最大维度。
 
         Args:
-            texts: 文本列表
+            texts: 本次要嵌入的文本列表
 
         Returns:
-            (vectors, feature_names):
-                vectors - List[List[float]]，每条文本的 TF-IDF 向量
-                feature_names - 全局词汇表（有序）
+            (vectors, vocab_size): 向量列表和当前词汇表大小
         """
-        # 对每条文本分词并统计词频
-        tokenized_docs: List[List[str]] = [self._tokenize(t) for t in texts]
+        # 将新文本追加到累积语料库
+        self._corpus.extend(texts)
 
-        # 构建全局词汇表
+        # 对整个累积语料库分词
+        tokenized_corpus: List[List[str]] = [self._tokenize(t) for t in self._corpus]
+
+        # 构建全局词汇表（只增不减）
         vocab_set: set = set()
-        for tokens in tokenized_docs:
+        for tokens in tokenized_corpus:
             vocab_set.update(tokens)
         feature_names: List[str] = sorted(vocab_set)
         vocab_index = {word: i for i, word in enumerate(feature_names)}
         vocab_size = len(feature_names)
-        n_docs = len(texts)
+        n_docs = len(self._corpus)
 
         # 计算 IDF：log(N / (1 + df))
         doc_freq: Counter = Counter()
-        for tokens in tokenized_docs:
+        for tokens in tokenized_corpus:
             unique_tokens = set(tokens)
             for t in unique_tokens:
                 doc_freq[t] += 1
@@ -113,9 +129,15 @@ class CPUBackend:
         for word, idx in vocab_index.items():
             idf[idx] = math.log((n_docs + 1) / (1 + doc_freq[word])) + 1.0
 
-        # 计算每条文档的 TF-IDF 向量
+        # 持久化词汇表
+        self._vocab = feature_names
+        self._idf = idf
+        self._vocab_index = vocab_index
+
+        # 只对本次传入的 texts 计算向量
+        tokenized_new = [self._tokenize(t) for t in texts]
         vectors: List[List[float]] = []
-        for tokens in tokenized_docs:
+        for tokens in tokenized_new:
             tf = Counter(tokens)
             total = len(tokens) if tokens else 1
             vec = [0.0] * vocab_size
@@ -131,7 +153,7 @@ class CPUBackend:
 
             vectors.append(vec)
 
-        return vectors, feature_names
+        return vectors, vocab_size
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """
@@ -168,7 +190,7 @@ class CPUBackend:
     def generate_answer(
         self,
         query: str,
-        context: List[str],
+        context,
         max_length: int = 512,
     ) -> str:
         """
@@ -179,13 +201,21 @@ class CPUBackend:
 
         Args:
             query: 用户提出的问题
-            context: 上下文文档列表（每条为一段文本）
+            context: 上下文，可以是字符串或字符串列表
             max_length: 答案最大字符数
 
         Returns:
             str: 生成的答案文本；若无匹配上下文则返回默认提示
         """
-        if not context:
+        # 统一处理：将 context 转为字符串列表
+        if isinstance(context, str):
+            context_list = [context]
+        elif isinstance(context, list):
+            context_list = context
+        else:
+            context_list = [str(context)]
+
+        if not context_list or all(not c for c in context_list):
             logger.warning("CPU 后端：未提供上下文，无法生成答案")
             return "抱歉，未找到相关上下文信息，无法回答该问题。"
 
@@ -199,7 +229,7 @@ class CPUBackend:
         best_sentence = ""
         best_score = 0
 
-        for doc in context:
+        for doc in context_list:
             # 按中英文标点和换行切分句子
             sentences = re.split(r'[。！？.!?\n]+', doc)
             for sentence in sentences:

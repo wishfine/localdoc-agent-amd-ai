@@ -21,6 +21,7 @@ from localdoc.chunker import TextChunker
 from localdoc.embedding import EmbeddingEngine
 from localdoc.retriever import DocumentRetriever
 from localdoc.generator import AnswerGenerator
+from localdoc.scheduler import BenchmarkTaskType
 from localdoc.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -66,16 +67,11 @@ class LocalDocAgent:
             f"  可用后端: {available_backends}"
         )
 
-    def _import_task_types(self):
-        """Lazily import BenchmarkTaskType to avoid circular imports."""
-        from localdoc.scheduler import BenchmarkTaskType
-        return BenchmarkTaskType
-
     def ingest_document(self, file_path: str) -> int:
         """
         导入单个文档到知识库。
 
-        当 scheduler 存在时，每个阶段通过调度器执行并记录调度日志。
+        当 scheduler 存在时，每个阶段通过调度器执行。
         当 scheduler 为 None 时，直接执行各阶段。
 
         Args:
@@ -86,23 +82,18 @@ class LocalDocAgent:
         """
         path = Path(file_path)
         logger.info(f"开始导入文档: {path.name}")
-        scheduling_log = []
 
         if self.scheduler:
-            TT = self._import_task_types()
-
             # 步骤 1：加载文档（通过调度器）
             doc = self.scheduler.execute(
-                TT.DOCUMENT_LOADING, self.loader.load_file, file_path
+                BenchmarkTaskType.DOCUMENT_LOADING, self.loader.load_file, file_path
             )
-            scheduling_log.append(self.scheduler.get_execution_log()[-1])
 
             # 步骤 2：文本分块（通过调度器）
             chunks = self.scheduler.execute(
-                TT.CHUNKING,
+                BenchmarkTaskType.CHUNKING,
                 lambda: self.chunker.chunk_text(doc["content"], source=doc["source"]),
             )
-            scheduling_log.append(self.scheduler.get_execution_log()[-1])
         else:
             t0 = time.time()
             doc = self.loader.load_file(file_path)
@@ -119,13 +110,10 @@ class LocalDocAgent:
             return 0
 
         if self.scheduler:
-            TT = self._import_task_types()
-
             # 步骤 3：向量化（通过调度器）
             embeddings = self.scheduler.execute(
-                TT.EMBEDDING, self.embedding_engine.embed_chunks, chunks
+                BenchmarkTaskType.EMBEDDING, self.embedding_engine.embed_chunks, chunks
             )
-            scheduling_log.append(self.scheduler.get_execution_log()[-1])
         else:
             t0 = time.time()
             embeddings = self.embedding_engine.embed_chunks(chunks)
@@ -212,17 +200,15 @@ class LocalDocAgent:
         scheduling_log = []
 
         if self.scheduler:
-            TT = self._import_task_types()
-
             # 步骤 1：检索相关文档块（通过调度器）
             relevant_chunks = self.scheduler.execute(
-                TT.RETRIEVAL, self.retriever.retrieve, question, top_k
+                BenchmarkTaskType.RETRIEVAL, self.retriever.retrieve, question, top_k
             )
             scheduling_log.append(self.scheduler.get_execution_log()[-1])
 
             # 步骤 2：生成回答（通过调度器）
             answer = self.scheduler.execute(
-                TT.GENERATION, self.generator.generate, question, relevant_chunks
+                BenchmarkTaskType.GENERATION, self.generator.generate, question, relevant_chunks
             )
             scheduling_log.append(self.scheduler.get_execution_log()[-1])
         else:

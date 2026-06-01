@@ -75,12 +75,13 @@ class AnswerGenerator:
         Returns:
             LLM 生成的回答
         """
-        # 将上下文块格式化为 prompt
-        context = self.format_context(context_chunks)
+        # 将上下文块格式化为 prompt 字符串
+        context_str = self.format_context(context_chunks)
 
         try:
-            answer = self.backend.generate_answer(query=query, context=context)
-            logger.info(f"后端生成回答成功 ({len(answer)} 字符)")
+            # 后端 generate_answer 接口统一接受 context: str
+            answer = self.backend.generate_answer(query=query, context=context_str)
+            logger.info(f"后端生成回答成功 (%d 字符)", len(answer))
             return answer
         except Exception as e:
             logger.error(
@@ -149,7 +150,10 @@ class AnswerGenerator:
         # 拼接为回答
         answer_parts = ["根据文档内容，找到以下相关信息：\n"]
         for i, (score, sentence, source) in enumerate(top_sentences, 1):
-            source_info = f"（来源: {source}）" if source else ""
+            # 只显示文件名，不暴露绝对路径
+            from pathlib import Path
+            display_source = Path(source).name if source else ""
+            source_info = f"（来源: {display_source}）" if display_source else ""
             answer_parts.append(f"{i}. {sentence}{source_info}")
 
         answer = "\n".join(answer_parts)
