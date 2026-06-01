@@ -6,7 +6,7 @@ cd "$SCRIPT_DIR"
 
 echo "============================================"
 echo "  LocalDoc Agent - Setup Local LLM"
-echo "  Model: Qwen3-1.7B"
+echo "  Model: Qwen2.5-0.5B-Instruct"
 echo "============================================"
 
 PYTHON=""

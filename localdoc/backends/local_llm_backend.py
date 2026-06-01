@@ -1,7 +1,7 @@
 """
 Local LLM Backend for LocalDoc Agent.
 
-Uses Qwen3-1.7B via Hugging Face Transformers for local answer generation.
+Uses Qwen2.5-0.5B-Instruct via Hugging Face Transformers for local answer generation.
 
 Important:
 - This is a local inference backend. It does NOT call any cloud API.
@@ -25,29 +25,29 @@ logger = get_logger(__name__)
 
 class LocalLLMBackend:
     """
-    Local LLM generation backend using Qwen3-1.7B.
+    Local LLM generation backend using Qwen2.5-0.5B-Instruct.
 
     Implements:
     - embed_texts(): delegates to CPUBackend TF-IDF (no separate embedding model)
-    - generate_answer(): uses local Qwen3-1.7B for generation
+    - generate_answer(): uses local Qwen2.5-0.5B-Instruct for generation
 
     Environment variables:
     - LOCALDOC_USE_LLM=1: enable this backend
     - LOCALDOC_LLM_MODEL_PATH: path to local model directory
     - LOCALDOC_LLM_MODEL_ID: Hugging Face model ID (fallback if local path not found)
-    - LOCALDOC_LLM_MAX_NEW_TOKENS: max generation tokens (default 256)
-    - LOCALDOC_LLM_CONTEXT_CHARS: max context characters (default 2000)
+    - LOCALDOC_LLM_MAX_NEW_TOKENS: max generation tokens (default 128)
+    - LOCALDOC_LLM_CONTEXT_CHARS: max context characters (default 1600)
     """
 
     def __init__(
         self,
         model_path: Optional[str] = None,
-        model_id: str = "Qwen/Qwen3-1.7B",
-        max_new_tokens: int = 256,
-        context_chars: int = 2000,
+        model_id: str = "Qwen/Qwen2.5-0.5B-Instruct",
+        max_new_tokens: int = 128,
+        context_chars: int = 1600,
     ) -> None:
         project_root = Path(__file__).resolve().parents[2]
-        default_model_path = project_root / "models" / "qwen3-1.7b"
+        default_model_path = project_root / "models" / "qwen2.5-0.5b-instruct"
 
         self.model_path = str(
             model_path or os.getenv("LOCALDOC_LLM_MODEL_PATH", default_model_path)
@@ -70,7 +70,7 @@ class LocalLLMBackend:
 
     @property
     def name(self) -> str:
-        return "LocalLLM(Qwen3-1.7B)"
+        return "LocalLLM(Qwen2.5-0.5B-Instruct)"
 
     def is_available(self) -> bool:
         """Check if the model directory exists locally."""
@@ -173,18 +173,17 @@ class LocalLLMBackend:
         system_prompt = (
             "你是一个本地知识库问答助手。"
             "请只根据给定的文档内容回答问题。"
-            "如果文档中没有相关信息，请明确说"文档中没有找到相关信息"。"
+            "如果文档中没有相关信息，请明确说“文档中没有找到相关信息”。"
             "回答要简洁，优先使用中文。"
         )
 
-        user_prompt = f"""下面是从本地知识库检索到的文档片段：
-
-{context}
-
-用户问题：
-{query}
-
-请根据上述文档片段回答用户问题。"""
+        user_prompt = (
+            "下面是从本地知识库检索到的文档片段：\n\n"
+            f"{context}\n\n"
+            "用户问题：\n"
+            f"{query}\n\n"
+            "请根据上述文档片段回答用户问题。"
+        )
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -195,7 +194,7 @@ class LocalLLMBackend:
         model = self._model
         torch = self._torch
 
-        # Apply chat template
+        # Apply chat template (Qwen2.5 style, no thinking mode)
         text = tokenizer.apply_chat_template(
             messages,
             tokenize=False,

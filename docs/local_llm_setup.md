@@ -1,10 +1,10 @@
 # 本地 LLM 接入指南
 
-## 为什么选择 Qwen3-1.7B
+## 为什么选择 Qwen2.5-0.5B-Instruct
 
 | 特征 | 说明 |
 |------|------|
-| 参数量 | 1.7B，轻量级，适合临时实验环境 |
+| 参数量 | 0.5B，轻量级，适合临时实验环境 |
 | 语言支持 | 中文、英文 |
 | 许可证 | Apache-2.0（Hugging Face） |
 | 依赖 | 仅需 transformers + torch，不需要 vLLM/Ollama |
@@ -33,7 +33,7 @@ bash scripts/setup_llm.sh
 bash scripts/download_llm.sh
 ```
 
-模型将下载到 `models/qwen3-1.7b/` 目录（约 3.5GB）。
+模型将下载到 `models/qwen2.5-0.5b-instruct/` 目录（约 1GB）。
 
 如果下载失败：
 - 检查网络连接
@@ -65,8 +65,8 @@ bash scripts/run_demo_llm.sh
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `LOCALDOC_USE_LLM` | `0` | 设为 `1` 启用 LLM 后端 |
-| `LOCALDOC_LLM_MODEL_PATH` | `models/qwen3-1.7b` | 本地模型目录 |
-| `LOCALDOC_LLM_MODEL_ID` | `Qwen/Qwen3-1.7B` | Hugging Face 模型 ID |
+| `LOCALDOC_LLM_MODEL_PATH` | `models/qwen2.5-0.5b-instruct` | 本地模型目录 |
+| `LOCALDOC_LLM_MODEL_ID` | `Qwen/Qwen2.5-0.5B-Instruct` | Hugging Face 模型 ID |
 | `LOCALDOC_LLM_MAX_NEW_TOKENS` | `256` | 最大生成 token 数 |
 | `LOCALDOC_LLM_CONTEXT_CHARS` | `2000` | 最大上下文字符数 |
 

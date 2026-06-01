@@ -10,7 +10,7 @@ from pathlib import Path
 from localdoc.backends.local_llm_backend import LocalLLMBackend
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODEL_DIR = PROJECT_ROOT / "models" / "qwen3-1.7b"
+MODEL_DIR = PROJECT_ROOT / "models" / "qwen2.5-0.5b-instruct"
 
 
 def main():
@@ -21,8 +21,8 @@ def main():
 
     backend = LocalLLMBackend(
         model_path=str(MODEL_DIR),
-        max_new_tokens=256,
-        context_chars=2000,
+        max_new_tokens=128,
+        context_chars=1600,
     )
 
     print(f"后端名称: {backend.name}")
@@ -30,12 +30,12 @@ def main():
     print(f"设备信息: {backend.get_device_info()}")
 
     query = "请用三句话解释什么是异构计算。"
-    context = """
-异构计算是指在同一个计算系统中同时使用不同类型的处理单元，例如 CPU、GPU、NPU 或 FPGA。
-CPU 适合复杂控制逻辑和通用任务，GPU 适合大规模并行计算，NPU 适合低功耗神经网络推理。
-合理的异构调度能够根据任务特点选择合适的硬件，从而提高性能和能效。
-AMD 锐龙 AI MAX+ 处理器集成了 CPU、GPU 和 NPU 三种计算单元，是异构计算的典型代表。
-"""
+    context = (
+        "异构计算是指在同一个计算系统中同时使用不同类型的处理单元，例如 CPU、GPU、NPU 或 FPGA。"
+        "CPU 适合复杂控制逻辑和通用任务，GPU 适合大规模并行计算，NPU 适合低功耗神经网络推理。"
+        "合理的异构调度能够根据任务特点选择合适的硬件，从而提高性能和能效。"
+        "AMD 锐龙 AI MAX+ 处理器集成了 CPU、GPU 和 NPU 三种计算单元，是异构计算的典型代表。"
+    )
 
     print("\n问题:", query)
     print("\n正在生成回答 ...")
