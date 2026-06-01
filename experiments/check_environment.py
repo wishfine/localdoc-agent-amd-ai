@@ -53,6 +53,7 @@ def check_torch() -> dict:
         "cuda_available": False,
         "gpu_name": None,
         "gpu_count": 0,
+        "gpu_arch": None,
     }
     try:
         import torch
@@ -64,7 +65,37 @@ def check_torch() -> dict:
         if result["cuda_available"]:
             result["gpu_name"] = torch.cuda.get_device_name(0)
             result["gpu_count"] = torch.cuda.device_count()
+            try:
+                result["gpu_arch"] = torch.cuda.get_device_capability(0)
+            except Exception:
+                pass
     except ImportError:
+        pass
+    return result
+
+
+def check_kernel() -> dict:
+    """Check kernel version (important for Strix Halo / Ryzen AI MAX+)."""
+    result = {
+        "kernel_version": platform.release(),
+        "is_strix_halo_compatible": None,
+        "min_kernel_note": "",
+    }
+    try:
+        kernel = platform.release()
+        parts = kernel.split(".")
+        if len(parts) >= 2:
+            major, minor = int(parts[0]), int(parts[1])
+            # Strix Halo requires kernel >= 6.14 (conservative check)
+            if major > 6 or (major == 6 and minor >= 14):
+                result["is_strix_halo_compatible"] = True
+            else:
+                result["is_strix_halo_compatible"] = False
+                result["min_kernel_note"] = (
+                    f"Kernel {kernel} may be too old for Strix Halo. "
+                    "Need >= 6.17.0 (Ubuntu HWE) or >= 6.18.4 (other)."
+                )
+    except (ValueError, IndexError):
         pass
     return result
 
@@ -90,7 +121,7 @@ def check_onnxruntime() -> dict:
     return result
 
 
-def determine_conclusion(torch_info: dict, ort_info: dict) -> dict:
+def determine_conclusion(torch_info: dict, ort_info: dict, kernel_info: dict) -> dict:
     rocm_available = (
         torch_info.get("hip_version") is not None
         and torch_info.get("cuda_available", False)
@@ -120,6 +151,9 @@ def determine_conclusion(torch_info: dict, ort_info: dict) -> dict:
         "gpu_mode": gpu_mode,
         "npu_mode": npu_mode,
         "current_mode": current_mode,
+        "kernel_version": kernel_info.get("kernel_version", "unknown"),
+        "is_strix_halo_compatible": kernel_info.get("is_strix_halo_compatible"),
+        "min_kernel_note": kernel_info.get("min_kernel_note", ""),
     }
 
 
@@ -132,7 +166,8 @@ def main():
     mem_info = check_memory()
     torch_info = check_torch()
     ort_info = check_onnxruntime()
-    conclusion = determine_conclusion(torch_info, ort_info)
+    kernel_info = check_kernel()
+    conclusion = determine_conclusion(torch_info, ort_info, kernel_info)
 
     # Build report
     lines = [
@@ -148,8 +183,14 @@ def main():
         f"  架构: {py_info['machine']}",
         f"  处理器: {py_info['processor']}",
         "",
-        "## 内存信息",
+        "## 内核信息",
+        f"  内核版本: {kernel_info['kernel_version']}",
+        f"  Strix Halo 兼容: {kernel_info['is_strix_halo_compatible']}",
     ]
+    if kernel_info["min_kernel_note"]:
+        lines.append(f"  ⚠️ {kernel_info['min_kernel_note']}")
+
+    lines += ["", "## 内存信息"]
     for k, v in mem_info.items():
         lines.append(f"  {k}: {v}")
 
@@ -170,6 +211,7 @@ def main():
         f"  可用 EP 列表: {ort_info['available_providers']}",
         f"  VitisAIExecutionProvider: {ort_info['vitisai_available']}",
         f"  DmlExecutionProvider: {ort_info['directml_available']}",
+        f"  RyzenAIExecutionProvider: {'RyzenAIExecutionProvider' in ort_info.get('available_providers', [])}",
         "",
         "## 结论",
         f"  ROCm GPU available: {conclusion['rocm_gpu_available']}",
@@ -177,6 +219,12 @@ def main():
         f"  GPU mode: {conclusion['gpu_mode']}",
         f"  NPU mode: {conclusion['npu_mode']}",
         f"  Current mode: {conclusion['current_mode']}",
+        "",
+        "## 注意事项",
+        "  - ROCm 覆盖 GPU 计算，不覆盖 NPU",
+        "  - Ryzen APU 上 ROCm 仅支持 PyTorch（不支持 TF/JAX/ONNX）",
+        "  - NPU 推理需通过 Ryzen AI SDK 或 Lemonade",
+        "  - Strix Halo 需要 kernel >= 6.17.0 (HWE) 或 >= 6.18.4",
         "",
     ]
 

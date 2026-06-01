@@ -1,6 +1,6 @@
 ============================================================
   LocalDoc Agent - 环境检查报告
-  生成时间: 2026-06-01 16:51:33
+  生成时间: 2026-06-01 20:41:01
 ============================================================
 
 ## Python 环境
@@ -9,6 +9,10 @@
   平台: macOS-26.5-arm64-arm-64bit-Mach-O
   架构: arm64
   处理器: arm
+
+## 内核信息
+  内核版本: 25.5.0
+  Strix Halo 兼容: True
 
 ## 内存信息
   note: psutil not installed, memory info unavailable
@@ -28,6 +32,7 @@
   可用 EP 列表: []
   VitisAIExecutionProvider: False
   DmlExecutionProvider: False
+  RyzenAIExecutionProvider: False
 
 ## 结论
   ROCm GPU available: False
@@ -35,5 +40,11 @@
   GPU mode: unavailable
   NPU mode: unavailable
   Current mode: CPU fallback + simulated backend
+
+## 注意事项
+  - ROCm 覆盖 GPU 计算，不覆盖 NPU
+  - Ryzen APU 上 ROCm 仅支持 PyTorch（不支持 TF/JAX/ONNX）
+  - NPU 推理需通过 Ryzen AI SDK 或 Lemonade
+  - Strix Halo 需要 kernel >= 6.17.0 (HWE) 或 >= 6.18.4
 
 ⚠️ 当前没有检测到真实 AMD GPU/NPU 硬件。所有 GPU/NPU 相关实验数据将为 simulated backend 结果。

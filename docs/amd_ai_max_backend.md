@@ -155,6 +155,91 @@ conda activate localdoc_env
 # 这样会导致环境损坏，只能重新运行安装程序
 ```
 
+### 2.6 Strix Halo (Ryzen AI MAX+) 统一内存优化
+
+> **重要**：Ryzen AI MAX+ 采用统一内存架构，CPU 和 GPU 共享系统内存（最高 128GB LPDDR5X-8000）。
+> 没有独立显存，需要专门的内存配置才能发挥最佳性能。
+
+#### 2.6.1 BIOS 设置
+
+**VRAM carve-out 设为最小值（如 0.5 GB）**。
+
+原因：统一内存架构下，静态预留大块显存会永久减少可用系统内存，
+而 GPU 实际使用的是动态 GTT 内存池，不需要大块静态预留。
+
+BIOS 中相关选项名称可能为：
+- VRAM / Carve-out / GART / Dedicated GPU memory / Firmware-reserved GPU memory
+
+#### 2.6.2 配置 TTM 页面限制
+
+TTM (Translation Table Manager) 控制 GPU 可使用的系统内存量：
+
+```bash
+# 安装 amd-ttm 工具
+sudo apt install pipx
+pipx ensurepath
+pipx install amd-debug-tools
+
+# 查看当前配置
+amd-ttm
+
+# 设置 GPU 可用内存（128GB 系统建议设 100GB）
+amd-ttm --set 100
+
+# 重启生效
+sudo reboot
+```
+
+配置写入 `/etc/modprobe.d/ttm.conf`。
+
+#### 2.6.3 内核版本硬性要求
+
+Ryzen AI MAX+ (gfx1151) 需要特定内核补丁，低于以下版本会导致
+GPU 计算工作负载初始化失败或行为异常：
+
+| 发行版 | 最低内核版本 |
+|--------|-------------|
+| Ubuntu 24.04 HWE | `6.17.0-19.19~24.04.2` |
+| Ubuntu 24.04 OEM | `6.14.0-1018` |
+| 其他发行版 | Linux kernel `6.18.4` |
+| Fedora 43 / Ubuntu 26.04 / Arch 2026.02 | 原生支持 |
+
+#### 2.6.4 ROCm 版本兼容性（Strix Halo）
+
+| ROCm 版本 | 兼容内核 | 旧内核 |
+|-----------|---------|--------|
+| 7.2.1 / 7.11.0+ | ✅ 稳定 | ⚠️ 不稳定 |
+| 7.2.0 | ✅ 稳定（仅 HWE/OEM/6.18.4+） | ❌ 不支持 |
+| 7.9.0 / 7.10.0 | ❌ 不支持 | ⚠️ 不稳定 |
+
+#### 2.6.5 APU 框架限制
+
+**Ryzen APU 上 ROCm 仅支持 PyTorch**，不支持 TensorFlow / JAX / ONNX Runtime。
+
+| 框架 | Ryzen APU | 独立 Radeon GPU |
+|------|-----------|----------------|
+| PyTorch | ✅ | ✅ |
+| TensorFlow | ❌ | ✅ |
+| JAX | ❌ | ✅ |
+| ONNX Runtime | ❌ | ✅ |
+
+这意味着：
+- `localdoc/backends/gpu_backend.py`（基于 PyTorch）✅ 是 APU 上的正确路径
+- `localdoc/backends/npu_backend.py`（基于 ONNX Runtime）→ NPU 不走 ROCm，需通过 Ryzen AI SDK / Lemonade
+
+#### 2.6.6 NPU 与 ROCm 的关系
+
+**ROCm 不覆盖 NPU**。ROCm 文档中没有任何 NPU 相关内容。
+
+NPU 推理需要通过以下方式：
+- **Ryzen AI SDK**（ONNX Runtime + VitisAI EP）
+- **Lemonade**（AMD 推理框架，推荐）
+- **Ryzers Docker 容器**（预配置环境）
+
+在本项目中：
+- GPU 后端（`AMDGPUBackend`）→ 通过 ROCm + PyTorch
+- NPU 后端（`AMDNPUBackend`）→ 通过 Ryzen AI SDK + ONNX Runtime（不走 ROCm）
+
 ---
 
 ## 3. ONNX Runtime AI / Ryzen AI SDK 配置
