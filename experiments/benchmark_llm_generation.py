@@ -86,11 +86,6 @@ def main():
         context_chars=1600,
     )
 
-    info = backend.get_device_info()
-    print(f"\n设备: {info['device']}")
-    print(f"硬件说明: {info['hardware_note']}")
-    print(f"模型本地可用: {info['model_available_local']}")
-
     rows = []
     for i, query in enumerate(TEST_QUERIES):
         print(f"\n[{i+1}/{len(TEST_QUERIES)}] {query[:40]}...")
@@ -104,6 +99,9 @@ def main():
 
         mem_after = get_memory_mb()
 
+        # Get device info AFTER model is loaded and inference is done
+        info_after = backend.get_device_info()
+
         # Estimate token counts (rough: 1 Chinese char ≈ 2 tokens)
         input_chars = len(TEST_CONTEXT) + len(query)
         output_chars = len(answer)
@@ -116,10 +114,10 @@ def main():
             "query": query,
             "model_name": "Qwen3-1.7B",
             "model_id": "Qwen/Qwen3-1.7B",
-            "device": info["device"],
-            "torch_cuda_available": info["torch_cuda_available"],
-            "torch_hip_version": info["torch_hip_version"] or "N/A",
-            "model_load_time_s": info["load_time_s"],
+            "device": info_after["device"],
+            "torch_cuda_available": info_after["torch_cuda_available"],
+            "torch_hip_version": info_after["torch_hip_version"] or "N/A",
+            "model_load_time_s": info_after["load_time_s"],
             "generation_time_s": round(gen_time, 3),
             "input_chars": input_chars,
             "output_chars": output_chars,
@@ -129,8 +127,9 @@ def main():
             "memory_before_mb": round(mem_before, 1),
             "memory_after_mb": round(mem_after, 1),
             "is_local_llm": True,
-            "is_amd_hardware_benchmark": info["is_amd_hardware_benchmark"],
-            "note": info["note"],
+            "is_amd_hardware_benchmark": False,
+            "is_rocm_runtime_detected": info_after.get("is_rocm_runtime_detected", False),
+            "note": info_after["note"],
         }
         rows.append(row)
 
@@ -147,7 +146,8 @@ def main():
         writer.writerows(rows)
     print(f"\n✅ 结果已保存: {csv_path}")
 
-    if info["device"] == "cpu":
+    first_info = rows[0] if rows else {}
+    if first_info.get("device") == "cpu":
         print("\n⚠️ 当前在 CPU 上运行 Qwen3-1.7B 推理，不是 GPU/NPU 实测。")
 
 

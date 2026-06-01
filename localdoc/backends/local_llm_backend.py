@@ -255,10 +255,17 @@ class LocalLLMBackend:
         except ImportError:
             pass
 
+        is_rocm = bool(hip_version and cuda_available)
+        is_cuda = bool(cuda_version and cuda_available)
+
         # Determine hardware note
-        if hip_version and cuda_available:
-            hardware_note = "AMD ROCm GPU detected (HIP %s)" % hip_version
-        elif cuda_version and cuda_available:
+        if is_rocm:
+            hardware_note = (
+                "AMD ROCm runtime detected (HIP %s); "
+                "LLM benchmark is local inference only, not strict AMD hardware benchmark."
+                % hip_version
+            )
+        elif is_cuda:
             hardware_note = "CUDA GPU detected (not AMD ROCm); not AMD hardware benchmark"
         else:
             hardware_note = "CPU inference only; not AMD GPU/NPU hardware benchmark."
@@ -275,7 +282,9 @@ class LocalLLMBackend:
             "max_new_tokens": self.max_new_tokens,
             "context_chars": self.context_chars,
             "is_local_llm": True,
-            "is_amd_hardware_benchmark": bool(hip_version and cuda_available),
+            "is_amd_hardware_benchmark": False,
+            "is_rocm_runtime_detected": is_rocm,
+            "is_cuda_runtime_detected": is_cuda,
             "torch_cuda_available": cuda_available,
             "torch_hip_version": hip_version,
             "torch_cuda_version": cuda_version,

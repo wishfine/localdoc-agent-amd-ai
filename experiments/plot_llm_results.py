@@ -159,7 +159,7 @@ def plot_rag_stage_breakdown(output_path: Optional[Path] = None) -> Optional[Pat
 
     fig, ax = plt.subplots(figsize=(8, 5), constrained_layout=True)
     fig.suptitle(
-        "RAG Stage Breakdown\n"
+        "RAG Coarse Latency Breakdown (ingest / query)\n"
         "Local LLM benchmark, not AMD GPU/NPU hardware benchmark",
         fontsize=13, fontweight="bold",
     )
@@ -207,7 +207,7 @@ def main():
     print("\n[2/3] 生成 RAG 模式对比图 ...")
     plot_rag_mode_comparison()
 
-    print("\n[3/3] 生成 RAG 阶段分解图 ...")
+    print("\n[3/3] 生成 RAG 粗粒度延迟分解图 ...")
     plot_rag_stage_breakdown()
 
     print("\n图表生成完成！")
