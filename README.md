@@ -266,6 +266,36 @@ bash run_benchmark.sh
 
 ---
 
+## 可选：接入本地小语言模型
+
+默认版本不加载 LLM，保证普通 CPU 环境可运行。如果需要展示**本地 AI 推理**能力，可以启用 Qwen3-1.7B 作为生成后端。
+
+### 启用步骤
+
+```bash
+# 1. 安装 LLM 依赖（torch, transformers 等）
+bash scripts/setup_llm.sh
+
+# 2. 下载模型（约 3.5GB，从 Hugging Face）
+bash scripts/download_llm.sh
+
+# 3. 测试模型
+python scripts/test_llm.py
+
+# 4. 启动带 LLM 的 Demo
+bash scripts/run_demo_llm.sh
+```
+
+### 说明
+
+- 该 LLM **完全本地运行**，不调用任何云端 API。
+- Embedding 仍使用 TF-IDF（CPUBackend），LLM 仅替换答案生成环节。
+- 无真实 AMD 硬件时，模型在 **CPU 上推理**，不是 GPU/NPU 实测。
+- 模型可从 `Qwen/Qwen3-1.7B`（Hugging Face）下载，Apache-2.0 许可证。
+- 详细说明见 [docs/local_llm_setup.md](docs/local_llm_setup.md)。
+
+---
+
 ## 许可证
 
 本项目采用 [MIT License](LICENSE)，仅供学术研究与课程实验使用。

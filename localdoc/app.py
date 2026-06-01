@@ -5,10 +5,12 @@ LocalDoc Agent - Gradio Web Demo
 支持文档上传、智能查询（含调度日志）、系统信息查看和基准测试。
 
 设计为在 CPU 上即可运行，可选开启模拟 NPU 演示模式。
+可选接入本地 LLM (Qwen3-1.7B)，通过 LOCALDOC_USE_LLM=1 环境变量启用。
 所有 simulated backend 结果仅用于验证调度流程，不代表真实硬件性能。
 """
 
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def _build_agent(simulate_npu: bool = False):
-    """Create a LocalDocAgent with scheduler and optional simulated NPU."""
+    """Create a LocalDocAgent with scheduler, optional LLM, and optional simulated NPU."""
     from localdoc.agent import LocalDocAgent
     from localdoc.scheduler import HeterogeneousScheduler
     from localdoc.backends.cpu_backend import CPUBackend
@@ -25,11 +27,28 @@ def _build_agent(simulate_npu: bool = False):
     backends = {"cpu": CPUBackend()}
     backend = CPUBackend()
 
+    # Check if local LLM is enabled via environment variable
+    use_llm = os.getenv("LOCALDOC_USE_LLM", "0") == "1"
+    if use_llm:
+        try:
+            from localdoc.backends.local_llm_backend import LocalLLMBackend
+            llm_backend = LocalLLMBackend()
+            if llm_backend.is_available():
+                backend = llm_backend
+                logger.info("Local LLM backend enabled: %s", llm_backend.name)
+            else:
+                logger.warning(
+                    "LOCALDOC_USE_LLM=1 but model not found at %s. "
+                    "Run: bash scripts/download_llm.sh",
+                    llm_backend.model_path,
+                )
+        except Exception as e:
+            logger.warning("Failed to load LocalLLMBackend: %s. Using CPU fallback.", e)
+
     if simulate_npu:
         try:
             from localdoc.backends.simulated_npu import SimulatedNPUBackend
             backends["npu"] = SimulatedNPUBackend()
-            backend = SimulatedNPUBackend()
         except ImportError:
             logger.warning("SimulatedNPUBackend 不可用，回退到 CPU")
 
@@ -250,6 +269,9 @@ def create_app():
 >
 > ⚠️ 当前默认运行在 **CPU fallback 模式**。SimulatedNPUBackend 仅用于演示调度逻辑，
 > **不代表真实 AMD NPU 性能**。
+>
+> 💡 可选：设置 `LOCALDOC_USE_LLM=1` 后启用本地 Qwen3-1.7B 生成后端。
+> 该后端完全本地运行，不调用云端 API。
             """
         )
 

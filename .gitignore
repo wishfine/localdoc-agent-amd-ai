@@ -141,3 +141,6 @@ results/*.csv
 figures/*.png
 *.db
 *.sqlite
+
+# Local LLM model files (too large for git)
+models/
