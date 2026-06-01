@@ -260,9 +260,21 @@ bash run_benchmark.sh
 
 将 `docs/experiment_report_draft.md` 中所有 `[模拟数据]` 标注替换为 `[实测数据]`，并更新对应数据表格与图表。
 
-### 第六步：接入 Qwen3.5 4B 模型（可选）
+### 第六步：接入 Qwen3-1.7B 本地 LLM（可选）
 
-在真实 AMD 平台上，可通过 ONNX Runtime 将 Qwen3.5 4B 模型部署到 NPU 上运行，实现神经网络级别的答案生成，替代当前的模板式生成策略。
+在真实 AMD 平台上，有多种方式运行本地 LLM：
+
+1. **Lemonade 推理框架**（推荐）：AMD 官方推理框架，内置 NPU 调度，提供 OpenAI 兼容 API。
+   - 安装：`pip install lemonade-sdk`
+   - AMD 官方适配模型：https://huggingface.co/amd
+
+2. **LM Studio + ROCm**：使用 LM Studio 加载量化模型，通过 ROCm GPU 加速推理。
+   - 下载：https://lmstudio.ai/
+
+3. **Ryzers Docker 容器**：AMD Research 提供的预配置容器，覆盖 LLM/NPU/视觉等场景。
+   - 仓库：https://github.com/AMDResearch/Ryzers
+
+4. **直接使用 Transformers + ROCm PyTorch**：当前 `local_llm_backend.py` 已支持自动检测 ROCm GPU。
 
 ---
 

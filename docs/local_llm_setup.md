@@ -107,3 +107,33 @@ bash run_demo.sh
 ## 如果 LLM 无法使用
 
 如果模型下载失败或依赖安装有问题，系统会自动回退到抽取式回答生成，不影响其他功能。
+
+---
+
+## 替代方案：在真实 AMD 硬件上运行
+
+### 方案 A：LM Studio + ROCm GPU 加速
+
+1. 安装 [LM Studio](https://lmstudio.ai/)
+2. 下载 Qwen3-1.7B 或其他量化模型
+3. LM Studio 自动使用 ROCm GPU 加速推理
+4. 启动本地 API Server（默认 `http://localhost:1234`）
+5. 通过 OpenAI 兼容 API 接入 LocalDoc Agent
+
+优势：可视化界面、ROCm GPU 加速、int4/int8 量化支持。
+
+### 方案 B：Lemonade 推理框架（AMD 官方）
+
+1. 安装：`pip install lemonade-sdk`
+2. AMD 官方适配模型列表：https://huggingface.co/amd
+3. 通过 Lemonade Server API 暴露本地推理端点
+
+优势：AMD 官方支持、内置 NPU 调度、统一 API。
+
+### 方案 C：Ryzers Docker 容器
+
+1. 克隆：`git clone https://github.com/AMDResearch/Ryzers.git`
+2. 构建：`./build.sh llm/ollama`
+3. 运行：`./run.sh llm/ollama`
+
+优势：环境隔离、开箱即用、AMD 官方维护。

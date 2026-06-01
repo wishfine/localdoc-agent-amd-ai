@@ -10,10 +10,13 @@
 1. [AMD Ryzen AI MAX+ 硬件概述](#1-amd-ryzen-ai-max-硬件概述)
 2. [ROCm/HIP 环境配置](#2-rocmhip-环境配置)
 3. [ONNX Runtime AI / Ryzen AI SDK 配置](#3-onnx-runtime-ai--ryzen-ai-sdk-配置)
-4. [如何替换 GPU 后端](#4-如何替换-gpu-后端)
-5. [如何替换 NPU 后端](#5-如何替换-npu-后端)
-6. [验证步骤](#6-验证步骤)
-7. [性能对比预期](#7-性能对比预期)
+4. [Lemonade 推理框架（推荐）](#4-lemonade-推理框架推荐)
+5. [Ryzers Docker 容器环境](#5-ryzers-docker-容器环境)
+6. [LM Studio + ROCm 替代方案](#6-lm-studio--rocm-替代方案)
+7. [如何替换 GPU 后端](#7-如何替换-gpu-后端)
+8. [如何替换 NPU 后端](#8-如何替换-npu-后端)
+9. [验证步骤](#9-验证步骤)
+10. [性能对比预期](#10-性能对比预期)
 
 ---
 
@@ -120,6 +123,38 @@ print('Matrix multiply test: OK, result shape:', c.shape)
 "
 ```
 
+### 2.4 Windows ROCm 配置（ROCm 7.12.0+）
+
+ROCm 7.12.0 由 [TheRock](https://github.com/ROCm/TheRock) 构建，已支持 Windows 平台：
+
+```bash
+# Windows ROCm 文档：https://rocm.docs.amd.com/en/7.12.0-preview/
+
+# 安装 ROCm Python SDK（Windows）
+python -m pip install --no-cache-dir "https://repo.radeon.com/rocm/windows/.rocm-rel-7.2_a/rocm_sdk_core-7.2.0.dev0-py3-none-win_amd64.whl"
+python -m pip install --no-cache-dir "https://repo.radeon.com/rocm/windows/.rocm-rel-7.2_a/rocm_sdk_devel-7.2.0.dev0-py3-none-win_amd64.whl"
+
+# 安装 PyTorch ROCm 版（Windows）
+python -m pip install --no-cache-dir "https://repo.radeon.com/rocm/windows/.rocm-rel-7.2_a/torch-2.9.1+rocmsdk20260116-cp312-cp312-win_amd64.whl"
+python -m pip install --no-cache-dir "https://repo.radeon.com/rocm/windows/.rocm-rel-7.2_a/torchvision-0.24.1+rocmsdk20260116-cp312-cp312-win_amd64.whl"
+```
+
+> **注意**：Windows ROCm 版本号和 wheel URL 可能随版本更新而变化，
+> 请参考 https://rocm.docs.amd.com/en/7.12.0-preview/ 获取最新链接。
+
+### 2.5 Ryzen AI SW 环境管理注意事项
+
+使用 Ryzen AI SDK 时，**不要直接修改基础环境**，应使用 conda 克隆：
+
+```bash
+# ✅ 正确做法：克隆环境后再开发
+conda create --name localdoc_env --clone ryzen-ai-1.6.1
+conda activate localdoc_env
+
+# ❌ 错误做法：直接在 ryzen-ai-1.6.1 环境中修改 onnxruntime/quark 等库
+# 这样会导致环境损坏，只能重新运行安装程序
+```
+
 ---
 
 ## 3. ONNX Runtime AI / Ryzen AI SDK 配置
@@ -212,7 +247,119 @@ python3 -m onnxruntime.quantization.quantize \
 
 ---
 
-## 4. 如何替换 GPU 后端
+## 4. Lemonade 推理框架（推荐）
+
+### 4.1 简介
+
+[Lemonade](https://github.com/lemonade-sdk/lemonade) 是 AMD 生态下的轻量级 AI 推理框架，
+专注于**推理加速、后端管理与多设备调度**。它封装了 NPU 调度逻辑，提供统一的推理 API，
+比直接使用裸 ONNX Runtime 更简单。
+
+- 项目地址：https://github.com/lemonade-sdk/lemonade
+- 文档地址：https://lemonade-server.ai/docs/server/
+- AMD 官方适配模型：https://huggingface.co/amd
+
+### 4.2 为什么推荐 Lemonade
+
+| 对比项 | 裸 ONNX Runtime | Lemonade |
+|--------|----------------|----------|
+| NPU 调度 | 手动配置 EP | 自动调度 |
+| 模型适配 | 需要手动量化 | AMD 官方预优化模型 |
+| API 复杂度 | 较高 | 简单统一 |
+| 多设备支持 | 需要自己实现 | 内置 CPU/GPU/NPU 切换 |
+
+### 4.3 在真实 AMD 环境中使用 Lemonade
+
+```bash
+# 安装 Lemonade
+pip install lemonade-sdk
+
+# 下载 AMD 官方适配的模型（如 Qwen 系列）
+# 参考 https://huggingface.co/amd 获取适配列表
+
+# 通过 Lemonade Server API 暴露本地推理端点
+lemonade serve --model <model-name>
+```
+
+在 LocalDoc Agent 中，可以通过 OpenAI 兼容 API 接入 Lemonade：
+```python
+# 设置环境变量指向 Lemonade Server
+export OPENAI_API_BASE=http://localhost:8000/v1
+```
+
+---
+
+## 5. Ryzers Docker 容器环境
+
+### 5.1 简介
+
+[AMDResearch/Ryzers](https://github.com/AMDResearch/Ryzers) 是 AMD Research 提供的
+Docker 容器化工具链，专为 AMD Ryzen AI 硬件（iGPU、NPU）量身定制。
+每个镜像最小化主机依赖，模块化设计支持跨应用复用。
+
+- 项目地址：https://github.com/AMDResearch/Ryzers
+- 维护方：AMD Research（官方）
+- License：MIT
+
+### 5.2 快速上手
+
+```bash
+# 环境要求：Ubuntu 22.04/24.04 + Docker
+
+# 克隆仓库
+git clone https://github.com/AMDResearch/Ryzers.git
+cd Ryzers
+
+# 构建目标镜像（以 LLM 推理为例）
+./build.sh llm/ollama
+
+# 运行容器（自动挂载 GPU 设备）
+./run.sh llm/ollama
+```
+
+### 5.3 与本项目相关的 Ryzers 镜像
+
+| 镜像类别 | 用途 | 与本项目关系 |
+|----------|------|-------------|
+| LLM（Ollama/Llamacpp） | 本地大模型推理 | 替代 LocalLLMBackend |
+| NPU（XDNA/IRON） | NPU 加速工具链 | 替代 AMDNPUBackend |
+| 视觉（OpenCV/SAM） | 目标检测 | 扩展文档 OCR |
+
+主机仅需安装 amdgpu 内核驱动，容器内已预配 ROCm 驱动绑定。
+
+---
+
+## 6. LM Studio + ROCm 替代方案
+
+### 6.1 简介
+
+[LM Studio](https://lmstudio.ai/) 是一个本地 LLM 客户端，支持 ROCm GPU 加速。
+它可以加载量化模型并提供 OpenAI 兼容 API，无需修改 LocalDoc Agent 核心代码。
+
+### 6.2 使用方式
+
+1. 安装 LM Studio：https://lmstudio.ai/
+2. 下载 Qwen3-1.7B 或其他模型
+3. 启动本地 API Server（默认 `http://localhost:1234`）
+4. 在 LocalDoc Agent 中通过环境变量接入：
+
+```bash
+export OPENAI_API_BASE=http://localhost:1234/v1
+export OPENAI_API_KEY=lm-studio
+export LOCALDOC_USE_LLM=1
+python localdoc/app.py
+```
+
+### 6.3 优势
+
+- ROCm GPU 加速推理（int4/int8 量化）
+- 可视化模型管理界面
+- 不需要修改 LocalDoc Agent 代码
+- 支持多种开源模型（Qwen、Mistral、Phi、Llama 等）
+
+---
+
+## 7. 如何替换 GPU 后端
 
 ### 4.1 修改后端实现文件
 
@@ -305,7 +452,7 @@ export HIP_VISIBLE_DEVICES=0
 
 ---
 
-## 5. 如何替换 NPU 后端
+## 8. 如何替换 NPU 后端
 
 ### 5.1 修改 NPU 后端实现
 
@@ -415,7 +562,7 @@ export VAIP_CONFIG_PATH=./vaip_config.json
 
 ---
 
-## 6. 验证步骤
+## 9. 验证步骤
 
 ### 6.1 硬件验证
 
@@ -520,7 +667,7 @@ for backend, results in data.get('backend_tests', {}).items():
 
 ---
 
-## 7. 性能对比预期
+## 10. 性能对比预期
 
 ### 7.1 预期性能提升
 
