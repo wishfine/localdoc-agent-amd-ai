@@ -179,9 +179,9 @@ class CPUBackend:
             return []
 
         logger.info("CPU 后端：开始对 %d 条文本进行 TF-IDF 嵌入", len(texts))
-        vectors, features = self._build_tfidf(texts)
+        vectors, vocab_size = self._build_tfidf(texts)
         logger.info(
-            "CPU 后端：嵌入完成，向量维度 = %d", len(features)
+            "CPU 后端：嵌入完成，向量维度 = %d", vocab_size
         )
         return vectors
 

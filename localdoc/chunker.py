@@ -266,11 +266,15 @@ class TextChunker:
                     overlapped_content = overlapped_content[:self.chunk_size]
                 chunk_content = overlapped_content
 
+            # Adjust start_pos: for i >= 1, the content starts with overlap
+            # from the previous chunk, so the actual position is earlier
+            actual_start = current_pos - self.chunk_overlap if i > 0 else current_pos
+
             result.append({
                 "content": chunk_content,
                 "source": source,
                 "index": i,
-                "start_pos": current_pos,
+                "start_pos": max(0, actual_start),
             })
             current_pos += len(chunks[i])  # 使用原始块长度更新位置
 

@@ -75,7 +75,14 @@ def check_torch() -> dict:
 
 
 def check_kernel() -> dict:
-    """Check kernel version (important for Strix Halo / Ryzen AI MAX+)."""
+    """Check kernel version (important for Strix Halo / Ryzen AI MAX+).
+
+    Requirements from ROCm docs:
+    - Ubuntu 24.04 HWE: >= 6.17.0-19.19~24.04.2
+    - Ubuntu 24.04 OEM: >= 6.14.0-1018
+    - Other distros: >= 6.18.4
+    We use 6.14 as "might work" threshold and 6.18 as "likely stable" threshold.
+    """
     result = {
         "kernel_version": platform.release(),
         "is_strix_halo_compatible": None,
@@ -86,14 +93,19 @@ def check_kernel() -> dict:
         parts = kernel.split(".")
         if len(parts) >= 2:
             major, minor = int(parts[0]), int(parts[1])
-            # Strix Halo requires kernel >= 6.14 (conservative check)
-            if major > 6 or (major == 6 and minor >= 14):
+            if major > 6 or (major == 6 and minor >= 18):
                 result["is_strix_halo_compatible"] = True
+            elif major == 6 and minor >= 14:
+                result["is_strix_halo_compatible"] = True
+                result["min_kernel_note"] = (
+                    f"Kernel {kernel} >= 6.14: may work on Ubuntu OEM (>= 6.14.0-1018), "
+                    "but >= 6.17.0 (HWE) or >= 6.18.4 (other) recommended for stability."
+                )
             else:
                 result["is_strix_halo_compatible"] = False
                 result["min_kernel_note"] = (
-                    f"Kernel {kernel} may be too old for Strix Halo. "
-                    "Need >= 6.17.0 (Ubuntu HWE) or >= 6.18.4 (other)."
+                    f"Kernel {kernel} too old for Strix Halo. "
+                    "Need >= 6.17.0 (Ubuntu HWE) or >= 6.18.4 (other distros)."
                 )
     except (ValueError, IndexError):
         pass
@@ -106,6 +118,7 @@ def check_onnxruntime() -> dict:
         "onnxruntime_version": None,
         "available_providers": [],
         "vitisai_available": False,
+        "ryzenai_available": False,
         "directml_available": False,
     }
     try:
@@ -115,6 +128,7 @@ def check_onnxruntime() -> dict:
         providers = ort.get_available_providers()
         result["available_providers"] = providers
         result["vitisai_available"] = "VitisAIExecutionProvider" in providers
+        result["ryzenai_available"] = "RyzenAIExecutionProvider" in providers
         result["directml_available"] = "DmlExecutionProvider" in providers
     except ImportError:
         pass
@@ -126,7 +140,11 @@ def determine_conclusion(torch_info: dict, ort_info: dict, kernel_info: dict) ->
         torch_info.get("hip_version") is not None
         and torch_info.get("cuda_available", False)
     )
-    npu_available = ort_info.get("vitisai_available", False) or ort_info.get("directml_available", False)
+    npu_available = (
+        ort_info.get("vitisai_available", False)
+        or ort_info.get("ryzenai_available", False)
+        or ort_info.get("directml_available", False)
+    )
 
     if rocm_available:
         gpu_mode = "real ROCm GPU"

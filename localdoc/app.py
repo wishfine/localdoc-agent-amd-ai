@@ -24,8 +24,10 @@ def _build_agent(simulate_npu: bool = False):
     from localdoc.scheduler import HeterogeneousScheduler
     from localdoc.backends.cpu_backend import CPUBackend
 
-    backends = {"cpu": CPUBackend()}
-    backend = CPUBackend()
+    # Single shared CPUBackend instance for scheduler and agent
+    cpu = CPUBackend()
+    backends = {"cpu": cpu}
+    backend = cpu  # default backend for agent
 
     # Check if local LLM is enabled via environment variable
     use_llm = os.getenv("LOCALDOC_USE_LLM", "0") == "1"
