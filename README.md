@@ -268,7 +268,7 @@ bash run_benchmark.sh
 
 ## 可选：接入本地小语言模型
 
-默认版本不加载 LLM，保证普通 CPU 环境可运行。如果需要展示**本地 AI 推理**能力，可以启用 Qwen2.5-0.5B-Instruct 作为生成后端。
+默认版本不加载 LLM，保证普通 CPU 环境可运行。如果需要展示**本地 AI 推理**能力，可以启用 Qwen3-1.7B 作为生成后端。
 
 ### 启用步骤
 
@@ -284,14 +284,21 @@ python scripts/test_llm.py
 
 # 4. 启动带 LLM 的 Demo
 bash scripts/run_demo_llm.sh
+
+# 5. 运行 LLM Benchmark（可选）
+bash scripts/run_llm_benchmark.sh
 ```
 
 ### 说明
 
+- 本项目使用 **Qwen3-1.7B** 作为可选本地 LLM 后端。
+- 默认不加载 LLM，设置 `LOCALDOC_USE_LLM=1` 才启用。
+- Qwen3-1.7B 用于展示本地生成式 AI 推理能力。
+- 关闭 thinking mode（`enable_thinking=False`）以保证演示稳定快速。
 - 该 LLM **完全本地运行**，不调用任何云端 API。
 - Embedding 仍使用 TF-IDF（CPUBackend），LLM 仅替换答案生成环节。
-- 无真实 AMD 硬件时，模型在 **CPU 上推理**，不是 GPU/NPU 实测。
-- 模型可从 `Qwen/Qwen2.5-0.5B-Instruct`（Hugging Face）下载，Apache-2.0 许可证。
+- 如果没有真实 AMD ROCm/NPU 环境，则该实验**不是** AMD GPU/NPU 加速实验。
+- 模型可从 `Qwen/Qwen3-1.7B`（Hugging Face）下载，Apache-2.0 许可证。
 - 详细说明见 [docs/local_llm_setup.md](docs/local_llm_setup.md)。
 
 ---

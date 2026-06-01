@@ -10,12 +10,13 @@ from pathlib import Path
 from localdoc.backends.local_llm_backend import LocalLLMBackend
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODEL_DIR = PROJECT_ROOT / "models" / "qwen2.5-0.5b-instruct"
+MODEL_DIR = PROJECT_ROOT / "models" / "qwen3-1.7b"
 
 
 def main():
     print("=" * 60)
     print("LocalDoc Agent - Test Local LLM")
+    print(f"Model: Qwen3-1.7B")
     print(f"Model path: {MODEL_DIR}")
     print("=" * 60)
 
@@ -25,9 +26,13 @@ def main():
         context_chars=1600,
     )
 
+    info = backend.get_device_info()
     print(f"后端名称: {backend.name}")
-    print(f"模型可用: {backend.is_available()}")
-    print(f"设备信息: {backend.get_device_info()}")
+    print(f"模型本地可用: {backend.is_available()}")
+    print(f"推理设备: {info['device']}")
+    print(f"torch.cuda.is_available(): {info['torch_cuda_available']}")
+    print(f"torch.version.hip: {info['torch_hip_version']}")
+    print(f"硬件说明: {info['hardware_note']}")
 
     query = "请用三句话解释什么是异构计算。"
     context = (
@@ -37,7 +42,7 @@ def main():
         "AMD 锐龙 AI MAX+ 处理器集成了 CPU、GPU 和 NPU 三种计算单元，是异构计算的典型代表。"
     )
 
-    print("\n问题:", query)
+    print(f"\n问题: {query}")
     print("\n正在生成回答 ...")
 
     start = time.perf_counter()
@@ -49,10 +54,12 @@ def main():
     print(answer)
     print("-" * 40)
     print(f"\n耗时: {elapsed:.2f}s")
-    print(f"设备: {backend.get_device_info()['device']}")
+    print(f"设备: {info['device']}")
 
-    if backend.get_device_info()["device"] == "cpu":
-        print("\n⚠️ 当前在 CPU 上运行推理，不是 GPU/NPU 实测。")
+    if info["device"] == "cpu":
+        print("\n⚠️ 当前在 CPU 上运行 Qwen3-1.7B 推理，不是 GPU/NPU 实测。")
+    if not info["torch_hip_version"]:
+        print("⚠️ 未检测到 AMD ROCm (torch.version.hip 为空)，不代表 AMD GPU 实测。")
 
 
 if __name__ == "__main__":

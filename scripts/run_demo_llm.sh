@@ -9,13 +9,14 @@ if [ -d "$SCRIPT_DIR/.venv" ]; then
 fi
 
 export LOCALDOC_USE_LLM=1
-export LOCALDOC_LLM_MODEL_PATH="$SCRIPT_DIR/models/qwen2.5-0.5b-instruct"
+export LOCALDOC_LLM_MODEL_PATH="$SCRIPT_DIR/models/qwen3-1.7b"
 export LOCALDOC_LLM_MAX_NEW_TOKENS=128
 export LOCALDOC_LLM_CONTEXT_CHARS=1600
 
 echo "============================================"
 echo "  LocalDoc Agent - Demo with Local LLM"
-echo "  Model: Qwen2.5-0.5B-Instruct (local)"
+echo "  Model: Qwen3-1.7B (local, no cloud API)"
+echo "  Thinking mode: disabled (enable_thinking=False)"
 echo "============================================"
 echo ""
 echo "  LOCALDOC_USE_LLM=$LOCALDOC_USE_LLM"

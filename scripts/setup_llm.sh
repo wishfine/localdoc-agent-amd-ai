@@ -6,7 +6,7 @@ cd "$SCRIPT_DIR"
 
 echo "============================================"
 echo "  LocalDoc Agent - Setup Local LLM"
-echo "  Model: Qwen2.5-0.5B-Instruct"
+echo "  Model: Qwen3-1.7B"
 echo "============================================"
 
 PYTHON=""
@@ -32,7 +32,7 @@ echo "[信息] Python: $(python --version)"
 echo "[信息] 升级 pip"
 pip install --upgrade pip
 
-echo "[信息] 安装 LLM 可选依赖 (torch, transformers, accelerate, ...)"
+echo "[信息] 安装 LLM 可选依赖 (torch, transformers>=4.51.0, ...)"
 pip install -r requirements-llm.txt
 
 echo ""

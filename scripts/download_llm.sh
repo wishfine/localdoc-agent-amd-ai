@@ -8,5 +8,5 @@ if [ -d "$SCRIPT_DIR/.venv" ]; then
     source "$SCRIPT_DIR/.venv/bin/activate"
 fi
 
-echo "[信息] 开始下载 Qwen2.5-0.5B-Instruct 模型 ..."
+echo "[信息] 开始下载 Qwen3-1.7B 模型 ..."
 python scripts/download_llm.py

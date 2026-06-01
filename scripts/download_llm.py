@@ -1,5 +1,5 @@
 """
-Download Qwen2.5-0.5B-Instruct model from Hugging Face Hub.
+Download Qwen3-1.7B model from Hugging Face Hub.
 
 Run: python scripts/download_llm.py
 """
@@ -7,9 +7,9 @@ Run: python scripts/download_llm.py
 from pathlib import Path
 from huggingface_hub import snapshot_download
 
-MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+MODEL_ID = "Qwen/Qwen3-1.7B"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-LOCAL_DIR = PROJECT_ROOT / "models" / "qwen2.5-0.5b-instruct"
+LOCAL_DIR = PROJECT_ROOT / "models" / "qwen3-1.7b"
 
 
 def main():

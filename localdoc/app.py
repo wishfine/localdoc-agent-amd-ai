@@ -5,7 +5,7 @@ LocalDoc Agent - Gradio Web Demo
 支持文档上传、智能查询（含调度日志）、系统信息查看和基准测试。
 
 设计为在 CPU 上即可运行，可选开启模拟 NPU 演示模式。
-可选接入本地 LLM (Qwen2.5-0.5B-Instruct)，通过 LOCALDOC_USE_LLM=1 环境变量启用。
+可选接入本地 LLM (Qwen3-1.7B)，通过 LOCALDOC_USE_LLM=1 环境变量启用。
 所有 simulated backend 结果仅用于验证调度流程，不代表真实硬件性能。
 """
 
@@ -270,7 +270,7 @@ def create_app():
 > ⚠️ 当前默认运行在 **CPU fallback 模式**。SimulatedNPUBackend 仅用于演示调度逻辑，
 > **不代表真实 AMD NPU 性能**。
 >
-> 💡 可选：设置 `LOCALDOC_USE_LLM=1` 后启用本地 Qwen2.5-0.5B-Instruct 生成后端。
+> 💡 可选：设置 `LOCALDOC_USE_LLM=1` 后启用本地 Qwen3-1.7B 生成后端。
 > 该后端完全本地运行，不调用云端 API。
             """
         )

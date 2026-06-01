@@ -1,13 +1,14 @@
 """
 Local LLM Backend for LocalDoc Agent.
 
-Uses Qwen2.5-0.5B-Instruct via Hugging Face Transformers for local answer generation.
+Uses Qwen3-1.7B via Hugging Face Transformers for local answer generation.
 
 Important:
 - This is a local inference backend. It does NOT call any cloud API.
 - It is optional and only activated when LOCALDOC_USE_LLM=1.
 - Embedding still falls back to CPUBackend TF-IDF to keep the system simple.
 - Without real AMD GPU/NPU, inference runs on CPU only.
+- This is NOT an AMD GPU/NPU hardware benchmark.
 """
 
 from __future__ import annotations
@@ -25,11 +26,14 @@ logger = get_logger(__name__)
 
 class LocalLLMBackend:
     """
-    Local LLM generation backend using Qwen2.5-0.5B-Instruct.
+    Local LLM generation backend using Qwen3-1.7B.
 
     Implements:
     - embed_texts(): delegates to CPUBackend TF-IDF (no separate embedding model)
-    - generate_answer(): uses local Qwen2.5-0.5B-Instruct for generation
+    - generate_answer(): uses local Qwen3-1.7B for generation
+
+    Qwen3 uses thinking mode by default. This backend disables it with
+    enable_thinking=False for stable, fast demo inference.
 
     Environment variables:
     - LOCALDOC_USE_LLM=1: enable this backend
@@ -42,12 +46,12 @@ class LocalLLMBackend:
     def __init__(
         self,
         model_path: Optional[str] = None,
-        model_id: str = "Qwen/Qwen2.5-0.5B-Instruct",
+        model_id: str = "Qwen/Qwen3-1.7B",
         max_new_tokens: int = 128,
         context_chars: int = 1600,
     ) -> None:
         project_root = Path(__file__).resolve().parents[2]
-        default_model_path = project_root / "models" / "qwen2.5-0.5b-instruct"
+        default_model_path = project_root / "models" / "qwen3-1.7b"
 
         self.model_path = str(
             model_path or os.getenv("LOCALDOC_LLM_MODEL_PATH", default_model_path)
@@ -67,10 +71,11 @@ class LocalLLMBackend:
         self._device = "cpu"
         self._loaded = False
         self._load_error: Optional[str] = None
+        self._load_time_s: float = 0.0
 
     @property
     def name(self) -> str:
-        return "LocalLLM(Qwen2.5-0.5B-Instruct)"
+        return "LocalLLM(Qwen3-1.7B)"
 
     def is_available(self) -> bool:
         """Check if the model directory exists locally."""
@@ -110,10 +115,17 @@ class LocalLLMBackend:
                 )
 
             # Device and dtype selection
-            if torch.cuda.is_available():
+            hip_version = getattr(torch.version, "hip", None)
+            cuda_version = getattr(torch.version, "cuda", None)
+
+            if hip_version and torch.cuda.is_available():
                 self._device = "cuda"
                 torch_dtype = torch.float16
-                logger.info("Using CUDA for LLM inference")
+                logger.info("Using AMD ROCm GPU (HIP %s) for LLM inference", hip_version)
+            elif cuda_version and torch.cuda.is_available():
+                self._device = "cuda"
+                torch_dtype = torch.float16
+                logger.info("Using CUDA GPU (CUDA %s) for LLM inference", cuda_version)
             else:
                 self._device = "cpu"
                 torch_dtype = torch.float32
@@ -136,9 +148,10 @@ class LocalLLMBackend:
             self._model.eval()
 
             self._loaded = True
+            self._load_time_s = round(time.perf_counter() - t0, 2)
             logger.info(
                 "Local LLM loaded in %.2fs (device=%s, dtype=%s)",
-                time.perf_counter() - t0,
+                self._load_time_s,
                 self._device,
                 torch_dtype,
             )
@@ -157,10 +170,14 @@ class LocalLLMBackend:
         """
         Generate an answer using the local LLM.
 
+        Disables Qwen3 thinking mode (enable_thinking=False) for stable demo.
+        Uses do_sample=True with temperature=0.7, top_p=0.8, top_k=20
+        as recommended by Qwen3 for non-thinking mode.
+
         Args:
             query: user question
             context: formatted context string
-            max_length: kept for API compatibility, actual length controlled by max_new_tokens
+            max_length: kept for API compatibility
 
         Returns:
             Generated answer text
@@ -194,11 +211,12 @@ class LocalLLMBackend:
         model = self._model
         torch = self._torch
 
-        # Apply chat template (Qwen2.5 style, no thinking mode)
+        # Apply chat template with thinking disabled for Qwen3
         text = tokenizer.apply_chat_template(
             messages,
             tokenize=False,
             add_generation_prompt=True,
+            enable_thinking=False,
         )
 
         inputs = tokenizer([text], return_tensors="pt").to(self._device)
@@ -207,7 +225,10 @@ class LocalLLMBackend:
             generated_ids = model.generate(
                 **inputs,
                 max_new_tokens=self.max_new_tokens,
-                do_sample=False,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.8,
+                top_k=20,
                 repetition_penalty=1.05,
                 pad_token_id=tokenizer.eos_token_id,
             )
@@ -223,6 +244,25 @@ class LocalLLMBackend:
 
     def get_device_info(self) -> Dict[str, Any]:
         """Get backend device and configuration info."""
+        hip_version = None
+        cuda_version = None
+        cuda_available = False
+        try:
+            import torch
+            hip_version = getattr(torch.version, "hip", None)
+            cuda_version = getattr(torch.version, "cuda", None)
+            cuda_available = torch.cuda.is_available()
+        except ImportError:
+            pass
+
+        # Determine hardware note
+        if hip_version and cuda_available:
+            hardware_note = "AMD ROCm GPU detected (HIP %s)" % hip_version
+        elif cuda_version and cuda_available:
+            hardware_note = "CUDA GPU detected (not AMD ROCm); not AMD hardware benchmark"
+        else:
+            hardware_note = "CPU inference only; not AMD GPU/NPU hardware benchmark."
+
         return {
             "backend": self.name,
             "model_path": self.model_path,
@@ -231,6 +271,14 @@ class LocalLLMBackend:
             "device": self._device,
             "loaded": self._loaded,
             "load_error": self._load_error,
+            "load_time_s": self._load_time_s,
             "max_new_tokens": self.max_new_tokens,
             "context_chars": self.context_chars,
+            "is_local_llm": True,
+            "is_amd_hardware_benchmark": bool(hip_version and cuda_available),
+            "torch_cuda_available": cuda_available,
+            "torch_hip_version": hip_version,
+            "torch_cuda_version": cuda_version,
+            "hardware_note": hardware_note,
+            "note": "Local LLM inference only; not AMD GPU/NPU hardware benchmark.",
         }

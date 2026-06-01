@@ -1,14 +1,15 @@
 # 本地 LLM 接入指南
 
-## 为什么选择 Qwen2.5-0.5B-Instruct
+## 为什么选择 Qwen3-1.7B
 
 | 特征 | 说明 |
 |------|------|
-| 参数量 | 0.5B，轻量级，适合临时实验环境 |
+| 模型 | Qwen3-1.7B（1.7B 参数） |
 | 语言支持 | 中文、英文 |
 | 许可证 | Apache-2.0（Hugging Face） |
-| 依赖 | 仅需 transformers + torch，不需要 vLLM/Ollama |
+| 依赖 | transformers>=4.51.0 + torch，不需要 vLLM/Ollama |
 | 用途 | 课程展示本地 LLM 推理能力 |
+| 特殊设置 | 关闭 thinking mode（enable_thinking=False） |
 
 ## 重要声明
 
@@ -16,6 +17,7 @@
 - 该 LLM **完全本地运行**，不调用任何云端 API。
 - 如果没有真实 AMD GPU/NPU 硬件，模型在 **CPU 上推理**，不代表 GPU/NPU 实测。
 - 该实验只证明"本地 LLM 生成链路可运行"，不声称 AMD GPU/NPU 加速。
+- Qwen3 默认开启 thinking mode，本项目关闭它（enable_thinking=False）以保证演示稳定。
 
 ## 安装步骤
 
@@ -25,7 +27,7 @@
 bash scripts/setup_llm.sh
 ```
 
-这会安装 `requirements-llm.txt` 中的依赖（torch, transformers, accelerate 等）。
+这会安装 `requirements-llm.txt` 中的依赖（torch, transformers>=4.51.0, accelerate 等）。
 
 ### 2. 下载模型
 
@@ -33,7 +35,7 @@ bash scripts/setup_llm.sh
 bash scripts/download_llm.sh
 ```
 
-模型将下载到 `models/qwen2.5-0.5b-instruct/` 目录（约 1GB）。
+模型将下载到 `models/qwen3-1.7b/` 目录（约 3.5GB）。首次下载需要较长时间。
 
 如果下载失败：
 - 检查网络连接
@@ -41,7 +43,13 @@ bash scripts/download_llm.sh
 - 重新运行 `bash scripts/download_llm.sh`
 - 或使用已有的 Hugging Face cache
 
-### 3. 测试模型
+### 3. 验证代码
+
+```bash
+python -m py_compile localdoc/backends/local_llm_backend.py
+```
+
+### 4. 测试模型
 
 ```bash
 python scripts/test_llm.py
@@ -49,32 +57,53 @@ python scripts/test_llm.py
 
 正常输出应包含：
 - 模型加载信息
+- 推理设备（CPU 或 GPU）
 - 问题和回答
-- 耗时和设备信息
+- 耗时和硬件说明
 
-### 4. 启动 Demo
+### 5. 启动 Demo
 
 ```bash
 bash scripts/run_demo_llm.sh
 ```
 
-访问 `http://localhost:7860`，上传文档后提问，系统将使用本地 LLM 生成回答。
+访问 `http://localhost:7860`，上传文档后提问，系统将使用本地 Qwen3-1.7B 生成回答。
+
+### 6. 运行 LLM Benchmark
+
+```bash
+bash scripts/run_llm_benchmark.sh
+```
+
+生成 LLM 生成延迟和 RAG 模式对比的 CSV 和图表。
 
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `LOCALDOC_USE_LLM` | `0` | 设为 `1` 启用 LLM 后端 |
-| `LOCALDOC_LLM_MODEL_PATH` | `models/qwen2.5-0.5b-instruct` | 本地模型目录 |
-| `LOCALDOC_LLM_MODEL_ID` | `Qwen/Qwen2.5-0.5B-Instruct` | Hugging Face 模型 ID |
-| `LOCALDOC_LLM_MAX_NEW_TOKENS` | `256` | 最大生成 token 数 |
-| `LOCALDOC_LLM_CONTEXT_CHARS` | `2000` | 最大上下文字符数 |
+| `LOCALDOC_LLM_MODEL_PATH` | `models/qwen3-1.7b` | 本地模型目录 |
+| `LOCALDOC_LLM_MODEL_ID` | `Qwen/Qwen3-1.7B` | Hugging Face 模型 ID |
+| `LOCALDOC_LLM_MAX_NEW_TOKENS` | `128` | 最大生成 token 数 |
+| `LOCALDOC_LLM_CONTEXT_CHARS` | `1600` | 最大上下文字符数 |
+
+## 如果生成过慢
+
+把 `LOCALDOC_LLM_MAX_NEW_TOKENS` 改成 64：
+
+```bash
+export LOCALDOC_LLM_MAX_NEW_TOKENS=64
+bash scripts/run_demo_llm.sh
+```
+
+## 如果机器内存不够
+
+直接关闭 LLM 模式，回退到原始抽取式回答：
+
+```bash
+bash run_demo.sh
+```
 
 ## 如果 LLM 无法使用
 
 如果模型下载失败或依赖安装有问题，系统会自动回退到抽取式回答生成，不影响其他功能。
-
-运行默认 Demo：
-```bash
-bash run_demo.sh
-```
