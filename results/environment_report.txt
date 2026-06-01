@@ -1,0 +1,39 @@
+============================================================
+  LocalDoc Agent - 环境检查报告
+  生成时间: 2026-06-01 16:51:33
+============================================================
+
+## Python 环境
+  Python 版本: 3.14.5 (main, May 10 2026, 10:21:34) [Clang 21.0.0 (clang-2100.0.123.102)]
+  可执行文件: /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/.venv/bin/python
+  平台: macOS-26.5-arm64-arm-64bit-Mach-O
+  架构: arm64
+  处理器: arm
+
+## 内存信息
+  note: psutil not installed, memory info unavailable
+
+## PyTorch 环境
+  torch 已安装: False
+  torch 版本: None
+  torch.version.cuda: None
+  torch.version.hip: None
+  torch.cuda.is_available(): False
+  GPU 名称: None
+  GPU 数量: 0
+
+## ONNX Runtime 环境
+  onnxruntime 已安装: False
+  onnxruntime 版本: None
+  可用 EP 列表: []
+  VitisAIExecutionProvider: False
+  DmlExecutionProvider: False
+
+## 结论
+  ROCm GPU available: False
+  AMD NPU available: False
+  GPU mode: unavailable
+  NPU mode: unavailable
+  Current mode: CPU fallback + simulated backend
+
+⚠️ 当前没有检测到真实 AMD GPU/NPU 硬件。所有 GPU/NPU 相关实验数据将为 simulated backend 结果。

@@ -5,7 +5,7 @@
 - document_loading → CPU
 - chunking → CPU
 - embedding → NPU preferred, GPU second, CPU fallback
-- retrieval → CPU/GPU
+- retrieval → GPU preferred, CPU fallback
 - generation → GPU preferred, CPU fallback
 - report_generation → GPU preferred, CPU fallback
 """
@@ -28,7 +28,7 @@ class BenchmarkTaskType(Enum):
     REPORT_GENERATION = "report_generation"
 
 
-# Priority rules: task_type -> list of (backend_name, reason)
+# Priority rules: task_type -> list of (backend_key, reason)
 _TASK_BACKEND_PRIORITY: Dict[BenchmarkTaskType, List[Tuple[str, str]]] = {
     BenchmarkTaskType.DOCUMENT_LOADING: [
         ("cpu", "CPU is optimal for I/O-bound document loading"),
@@ -65,13 +65,6 @@ class HeterogeneousScheduler:
     """
 
     def __init__(self, backends: Optional[Dict[str, Any]] = None):
-        """
-        Initialize the scheduler.
-
-        Args:
-            backends: Optional dict mapping backend name -> backend instance.
-                      If None, will auto-detect available backends.
-        """
         self.backends: Dict[str, Any] = {}
         self._execution_log: List[Dict[str, Any]] = []
         self._schedule_cache: Dict[str, str] = {}
@@ -85,23 +78,22 @@ class HeterogeneousScheduler:
         """
         Detect all available hardware backends.
 
-        Tries to import and instantiate known backend classes. Falls back to
-        CPU-only if nothing else is available.
-
-        Returns:
-            Dict of backend name -> backend instance.
+        GPU detection prioritizes ROCm over CUDA:
+        - If torch.version.hip is set and torch.cuda.is_available() → ROCmBackend
+        - If torch.version.cuda is set and torch.cuda.is_available() → CUDABackend
         """
         detected: Dict[str, Any] = {}
 
         # Always have CPU available
-        detected["cpu"] = self._create_cpu_backend()
+        from localdoc.backends.cpu_backend import CPUBackend
+        detected["cpu"] = CPUBackend()
 
-        # Try GPU (AMD ROCm or CUDA)
+        # Try GPU (ROCm preferred over CUDA)
         gpu_backend = self._try_detect_gpu()
         if gpu_backend is not None:
             detected["gpu"] = gpu_backend
 
-        # Try NPU (XDNA / Ryzen AI)
+        # Try NPU (Ryzen AI / ONNX Runtime)
         npu_backend = self._try_detect_npu()
         if npu_backend is not None:
             detected["npu"] = npu_backend
@@ -110,23 +102,20 @@ class HeterogeneousScheduler:
         logger.info("Detected backends: %s", list(detected.keys()))
         return detected
 
-    def _create_cpu_backend(self) -> "CPUBackend":
-        """Create a CPU backend instance."""
-        return CPUBackend()
-
     def _try_detect_gpu(self) -> Optional[Any]:
-        """Try to detect a GPU backend (CUDA or ROCm)."""
+        """Try to detect a GPU backend. ROCm is checked before CUDA."""
         try:
-            import torch  # noqa: F401
-            if torch.cuda.is_available():
-                return CUDABackend()
-        except ImportError:
-            pass
+            import torch
+            hip_version = getattr(torch.version, "hip", None)
+            cuda_version = getattr(torch.version, "cuda", None)
 
-        try:
-            import torch  # noqa: F401
-            if hasattr(torch, "hip") and torch.cuda.is_available():
+            if hip_version and torch.cuda.is_available():
+                logger.info("Detected AMD ROCm GPU (HIP %s)", hip_version)
                 return ROCmBackend()
+
+            if cuda_version and torch.cuda.is_available():
+                logger.info("Detected NVIDIA CUDA GPU (CUDA %s)", cuda_version)
+                return CUDABackend()
         except ImportError:
             pass
 
@@ -134,13 +123,13 @@ class HeterogeneousScheduler:
         return None
 
     def _try_detect_npu(self) -> Optional[Any]:
-        """Try to detect an NPU backend (XDNA / Ryzen AI)."""
+        """Try to detect an AMD NPU backend via ONNX Runtime."""
         try:
-            from .npu_backend import XDNABackend
-            backend = XDNABackend()
+            from localdoc.backends.npu_backend import AMDNPUBackend
+            backend = AMDNPUBackend()
             if backend.is_available():
                 return backend
-        except (ImportError, AttributeError):
+        except ImportError:
             pass
 
         logger.debug("No NPU backend detected")
@@ -150,14 +139,8 @@ class HeterogeneousScheduler:
         """
         Select the best available backend for a given task type.
 
-        Args:
-            task_type: The type of task to schedule.
-
         Returns:
             Tuple of (backend_instance, reason_string).
-
-        Raises:
-            RuntimeError: If no backend is available for the task type.
         """
         if task_type not in _TASK_BACKEND_PRIORITY:
             raise ValueError(f"Unknown task type: {task_type}")
@@ -166,12 +149,17 @@ class HeterogeneousScheduler:
 
         for backend_name, reason in priority_list:
             if backend_name in self.backends:
+                # Check if backend is simulated and add warning
+                backend = self.backends[backend_name]
+                is_simulated = getattr(backend, "name", "").startswith("Simulated")
+                if is_simulated:
+                    reason = f"{reason} [SIMULATED - not real hardware]"
                 logger.info(
                     "Task %s -> backend '%s': %s",
                     task_type.value, backend_name, reason,
                 )
                 self._schedule_cache[task_type.value] = backend_name
-                return self.backends[backend_name], reason
+                return backend, reason
 
         raise RuntimeError(
             f"No backend available for task type '{task_type.value}'. "
@@ -187,20 +175,10 @@ class HeterogeneousScheduler:
     ) -> Any:
         """
         Execute a function on the best available backend for the given task type.
-
         Tracks execution timing and logs the result.
-
-        Args:
-            task_type: The type of task being executed.
-            func: The callable to execute.
-            *args: Positional arguments passed to func.
-            **kwargs: Keyword arguments passed to func.
-
-        Returns:
-            The return value of func.
         """
         backend, reason = self.select_backend(task_type)
-        backend_name = type(backend).__name__
+        backend_name = getattr(backend, "name", type(backend).__name__)
 
         logger.info(
             "Executing %s on %s (%s)",
@@ -225,6 +203,7 @@ class HeterogeneousScheduler:
                 "reason": reason,
                 "elapsed_seconds": round(elapsed, 6),
                 "error": error_occurred,
+                "is_simulated": backend_name.startswith("Simulated"),
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             }
             self._execution_log.append(entry)
@@ -245,9 +224,7 @@ class HeterogeneousScheduler:
     def get_schedule_report(self) -> Dict[str, Dict[str, str]]:
         """
         Get a report showing which backend is assigned to each task type.
-
-        Returns:
-            Dict mapping task_type -> {backend, reason, available_backends}.
+        Includes simulation warning if the selected backend is simulated.
         """
         report = {}
         available_keys = list(self.backends.keys())
@@ -256,28 +233,27 @@ class HeterogeneousScheduler:
             priority_list = _TASK_BACKEND_PRIORITY.get(task_type, [])
             selected_backend = None
             selected_reason = "No backend available"
+            is_simulated = False
 
             for backend_name, reason in priority_list:
                 if backend_name in self.backends:
+                    backend = self.backends[backend_name]
                     selected_backend = backend_name
                     selected_reason = reason
+                    is_simulated = getattr(backend, "name", "").startswith("Simulated")
                     break
 
             report[task_type.value] = {
                 "backend": selected_backend or "none",
                 "reason": selected_reason,
                 "available_backends": available_keys,
+                "is_simulated": is_simulated,
             }
 
         return report
 
     def get_execution_log(self) -> List[Dict[str, Any]]:
-        """
-        Get the execution log with timing information.
-
-        Returns:
-            List of dicts, each containing task_type, backend, elapsed_seconds, etc.
-        """
+        """Get the execution log with timing information."""
         return list(self._execution_log)
 
     def clear_log(self) -> None:
@@ -286,49 +262,18 @@ class HeterogeneousScheduler:
 
 
 # ---------------------------------------------------------------------------
-# Built-in backend stubs
+# Lightweight backend stubs for auto-detection (used by the scheduler only)
 # ---------------------------------------------------------------------------
 
-class CPUBackend:
-    """CPU backend - always available."""
-
-    name = "cpu"
-    description = "Standard CPU backend"
-
-    def is_available(self) -> bool:
-        return True
-
-    def __repr__(self) -> str:
-        return "CPUBackend()"
-
-
-class CUDABackend:
-    """NVIDIA CUDA GPU backend."""
-
-    name = "cuda"
-    description = "NVIDIA CUDA GPU backend"
-
-    def is_available(self) -> bool:
-        try:
-            import torch
-            return torch.cuda.is_available()
-        except ImportError:
-            return False
-
-    def __repr__(self) -> str:
-        return "CUDABackend()"
-
-
 class ROCmBackend:
-    """AMD ROCm GPU backend."""
-
+    """AMD ROCm GPU backend stub."""
     name = "rocm"
     description = "AMD ROCm GPU backend"
 
     def is_available(self) -> bool:
         try:
             import torch
-            return torch.cuda.is_available()
+            return bool(getattr(torch.version, "hip", None)) and torch.cuda.is_available()
         except ImportError:
             return False
 
@@ -336,42 +281,17 @@ class ROCmBackend:
         return "ROCmBackend()"
 
 
-class SimulatedNPUBackend:
-    """Simulated NPU backend for demo / development purposes."""
-
-    name = "simulated_npu"
-    description = "Simulated NPU backend (for demo without real XDNA hardware)"
-
-    def __init__(self, simulate_latency_ms: float = 5.0):
-        self.simulate_latency_ms = simulate_latency_ms
+class CUDABackend:
+    """NVIDIA CUDA GPU backend stub."""
+    name = "cuda"
+    description = "NVIDIA CUDA GPU backend"
 
     def is_available(self) -> bool:
-        return True
-
-    def __repr__(self) -> str:
-        return f"SimulatedNPUBackend(latency={self.simulate_latency_ms}ms)"
-
-
-class XDNABackend:
-    """AMD XDNA NPU backend for Ryzen AI processors."""
-
-    name = "xdna_npu"
-    description = "AMD XDNA NPU backend (Ryzen AI)"
-
-    def __init__(self):
-        self._available = self._probe()
-
-    def _probe(self) -> bool:
-        """Probe for XDNA device availability."""
         try:
-            import onnxruntime as ort
-            providers = ort.get_available_providers()
-            return "VitisAIExecutionProvider" in providers
+            import torch
+            return bool(getattr(torch.version, "cuda", None)) and torch.cuda.is_available()
         except ImportError:
             return False
 
-    def is_available(self) -> bool:
-        return self._available
-
     def __repr__(self) -> str:
-        return f"XDNABackend(available={self._available})"
+        return "CUDABackend()"

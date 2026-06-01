@@ -1,10 +1,13 @@
 """
-延迟基准测试 - Latency Benchmark
+延迟基准测试 - Simulated Latency Benchmark
 
-自动测试不同配置下的系统响应时间：
-- 不同文档数量 (1, 5, 10, 20, 50)
-- 不同 chunk 数量 (10, 50, 100, 500)
-- 不同后端策略 (CPU, GPU, NPU, Simulated NPU)
+⚠️ 这是一个 **模拟延迟基准测试**，不是真实 AMD 硬件实测。
+
+使用 time.sleep() 和后端延迟乘数模拟不同后端策略的延迟差异。
+所有数据标记为 is_simulated=True，measurement_type="simulated_latency"。
+
+目的：验证异构调度框架在不同后端策略下的行为差异，
+不代表真实 AMD GPU/NPU 的性能。
 
 输出 CSV:
 - results/latency_results.csv
@@ -190,10 +193,13 @@ def benchmark_ingestion(
                 "backend": backend,
                 "latency_s": round(elapsed, 6),
                 "latency_ms": round(elapsed * 1000, 3),
+                "is_simulated": True,
+                "measurement_type": "simulated_latency",
+                "note": "Simulated backend latency, not real AMD hardware measurement.",
                 **resources,
             }
             rows.append(row)
-            print(f"  [摄入] docs={count:>3}, backend={backend:<14} -> {elapsed * 1000:>8.1f} ms")
+            print(f"  [ingestion] docs={count:>3}, simulated {backend:<14} policy -> {elapsed * 1000:>8.1f} ms")
     return rows
 
 
@@ -218,10 +224,13 @@ def benchmark_querying(
                 "backend": backend,
                 "latency_s": round(elapsed, 6),
                 "latency_ms": round(elapsed * 1000, 3),
+                "is_simulated": True,
+                "measurement_type": "simulated_latency",
+                "note": "Simulated backend latency, not real AMD hardware measurement.",
                 **resources,
             }
             rows.append(row)
-            print(f"  [查询] chunks={count:>4}, backend={backend:<14} -> {elapsed * 1000:>8.1f} ms")
+            print(f"  [query] chunks={count:>4}, simulated {backend:<14} policy -> {elapsed * 1000:>8.1f} ms")
     return rows
 
 
@@ -248,10 +257,13 @@ def benchmark_end_to_end(
             "backend": backend,
             "latency_s": round(elapsed, 6),
             "latency_ms": round(elapsed * 1000, 3),
+            "is_simulated": True,
+            "measurement_type": "simulated_latency",
+            "note": "Simulated backend latency, not real AMD hardware measurement.",
             **resources,
         }
         rows.append(row)
-        print(f"  [端到端] docs={doc_count:>3}, backend={backend:<14} -> {elapsed * 1000:>8.1f} ms")
+        print(f"  [end-to-end] docs={doc_count:>3}, simulated {backend:<14} policy -> {elapsed * 1000:>8.1f} ms")
     return rows
 
 
@@ -325,10 +337,11 @@ def main(argv: Optional[List[str]] = None) -> None:
         RESULTS_DIR = Path(args.output_dir)
 
     print("=" * 60)
-    print("  延迟基准测试 (Latency Benchmark)")
+    print("  Simulated Latency Benchmark (模拟延迟基准测试)")
+    print("  ⚠️ NOT real AMD hardware measurement")
     print(f"  文档数量: {args.doc_counts}")
     print(f"  Chunk数量: {args.chunk_counts}")
-    print(f"  后端策略: {args.backends}")
+    print(f"  后端策略: {args.backends} (all simulated)")
     print(f"  重复次数: {args.repeats}")
     print(f"  psutil 可用: {HAS_PSUTIL}")
     print("=" * 60)
@@ -361,6 +374,9 @@ def main(argv: Optional[List[str]] = None) -> None:
                 "backend": backend,
                 "avg_latency_ms": round(avg_ms, 3),
                 "test_count": len(subset),
+                "is_simulated": True,
+                "measurement_type": "simulated_latency",
+                "note": "Simulated backend policy comparison, not real hardware.",
             })
     save_results_csv(backend_summary, "backend_results.csv")
 

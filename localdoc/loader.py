@@ -105,24 +105,45 @@ class DocumentLoader:
         path = Path(file_path)
         self._validate_file(path, ".pdf")
 
-        # 优先尝试 pdfplumber（对中文支持更好）
+        # 优先尝试 pypdf（推荐依赖）
+        try:
+            from pypdf import PdfReader
+            return self._extract_with_pypdf(path)
+        except ImportError:
+            logger.info("pypdf 未安装，尝试其他 PDF 库")
+
+        # 回退到 pdfplumber
         try:
             import pdfplumber
-
             return self._extract_with_pdfplumber(path)
         except ImportError:
-            logger.info("pdfplumber 未安装，尝试使用 PyPDF2")
+            logger.info("pdfplumber 未安装，尝试 PyPDF2")
 
         # 回退到 PyPDF2
         try:
             from PyPDF2 import PdfReader
-
             return self._extract_with_pypdf2(path)
         except ImportError:
             raise ImportError(
                 "需要安装 PDF 处理库才能加载 PDF 文件。"
-                "请执行: pip install pdfplumber  或  pip install PyPDF2"
+                "请执行: pip install pypdf"
             )
+
+    def _extract_with_pypdf(self, path: Path) -> str:
+        """使用 pypdf 提取 PDF 文本。"""
+        from pypdf import PdfReader
+
+        reader = PdfReader(str(path))
+        pages_text: list[str] = []
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            if text.strip():
+                pages_text.append(text)
+        logger.info(
+            f"pypdf 成功提取 PDF: {path.name} "
+            f"(共 {len(reader.pages)} 页, {len(pages_text)} 页有文本)"
+        )
+        return "\n\n".join(pages_text)
 
     def _extract_with_pdfplumber(self, path: Path) -> str:
         """使用 pdfplumber 提取 PDF 文本。"""
