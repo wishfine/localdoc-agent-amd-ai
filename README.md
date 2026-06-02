@@ -183,9 +183,13 @@ localdoc-agent-amd-ai/
 │
 ├── experiments/                        # 实验脚本
 │   ├── __init__.py
-│   ├── check_environment.py            # 环境检测脚本（硬件/驱动/后端可用性）
-│   ├── benchmark_latency.py            # 延迟基准测试 (生成 CSV)
-│   └── plot_results.py                 # 结果绘图脚本 (生成 PNG)
+│   ├── check_environment.py            # 环境检测（硬件/驱动/后端/内核）
+│   ├── benchmark_real.py               # 真实硬件基准测试（自动检测 GPU/NPU）
+│   ├── benchmark_latency.py            # 模拟延迟基准测试（simulated only）
+│   ├── benchmark_llm_generation.py     # LLM 生成延迟测试
+│   ├── benchmark_rag_modes.py          # RAG 模式对比（extractive vs LLM）
+│   ├── plot_results.py                 # 基础结果绘图
+│   └── plot_llm_results.py             # LLM 结果绘图
 │
 ├── tests/                              # 单元测试
 │   ├── __init__.py
@@ -254,7 +258,13 @@ python experiments/check_environment.py
 bash run_benchmark.sh
 ```
 
-此时 `results/` 目录下的数据将包含真实硬件性能数据。
+`run_benchmark.sh` 会自动调用 `experiments/benchmark_real.py`：
+- 如果检测到真实 AMD GPU/NPU 硬件，使用 `backend.fit_and_embed()` / `backend.transform()` 进行**真实推理测量**
+- 如果没有硬件，自动回退到 simulated 模式
+- CSV 中 `measurement_type` 列区分 `real_hardware` 和 `simulated`
+- 同时运行 simulated 基准作为对比基线
+
+此时 `results/` 目录下的数据将包含真实硬件性能数据（标记为 `measurement_type=real_hardware`）。
 
 ### 第五步：更新实验报告
 
