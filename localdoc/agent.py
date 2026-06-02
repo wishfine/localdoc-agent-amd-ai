@@ -1,11 +1,9 @@
 """
 LocalDoc Agent - 智能体主控模块
 
-LocalDocAgent 是整个 RAG（检索增强生成）管线的主控类，
-负责协调文档加载、分块、向量化、检索和生成的完整流程。
-
+LocalDocAgent 是 RAG 管线的主控类。
 当提供了 scheduler 时，每个阶段通过调度器选择后端并记录调度日志。
-当 scheduler 为 None 时，各组件直接使用其默认后端（CPU fallback）。
+当 scheduler 为 None 时，直接执行各阶段。
 
 管线流程：
   文档加载 -> 文本分块 -> 向量化 -> 索引存储 -> 查询检索 -> 答案生成
@@ -31,48 +29,63 @@ class LocalDocAgent:
     """
     本地文档智能体 - RAG 管线的主控类。
 
-    整合文档加载、分块、向量化、检索和答案生成的完整流程。
-    当提供 scheduler 时，每个阶段通过异构调度器选择最优后端。
-
-    Args:
-        backend: 推理后端实例（可选），需同时支持 embed_texts 和
-                 generate_answer 方法。如果不提供，各组件将使用回退方案。
-        scheduler: 异构调度器（可选），用于管理各阶段的后端选择
+    跟踪所有已摄入的 chunk，每次新增文档后重新构建向量索引，
+    保证所有文档的向量维度一致。
     """
 
     def __init__(self, backend=None, scheduler=None) -> None:
         self.backend = backend
         self.scheduler = scheduler
 
-        # 初始化各组件
         self.loader = DocumentLoader()
         self.chunker = TextChunker(chunk_size=500, chunk_overlap=50)
         self.embedding_engine = EmbeddingEngine(backend=backend)
         self.retriever = DocumentRetriever(embedding_engine=self.embedding_engine)
         self.generator = AnswerGenerator(backend=backend)
 
-        # 统计信息
+        # 跟踪所有已摄入的 chunk 和文件
+        self._all_chunks: list = []
         self._ingested_files: list[str] = []
-        self._total_chunks: int = 0
 
         backend_name = type(backend).__name__ if backend else "None (使用回退方案)"
-        scheduler_name = type(scheduler).__name__ if scheduler else "None"
-        scheduler_enabled = scheduler is not None
-        available_backends = list(scheduler.backends.keys()) if scheduler else []
-
         logger.info(
             f"LocalDocAgent 初始化完成\n"
             f"  后端: {backend_name}\n"
-            f"  调度器: {scheduler_name} (enabled={scheduler_enabled})\n"
-            f"  可用后端: {available_backends}"
+            f"  调度器: {'已启用' if scheduler else '未启用'}"
         )
+
+    def _rebuild_index(self) -> None:
+        """
+        用当前所有 chunk 重新构建向量索引。
+
+        保证所有文档的向量维度一致（基于同一个词汇表）。
+        """
+        if not self._all_chunks:
+            return
+
+        # 重置后端和引擎状态，确保从零构建词汇表
+        if self.backend and hasattr(self.backend, 'reset_corpus'):
+            self.backend.reset_corpus()
+        self.embedding_engine.reset()
+
+        # 用全部 chunk 构建词汇表和向量
+        embeddings = self.embedding_engine.embed_chunks(self._all_chunks)
+
+        # 重建 retriever 索引
+        self.retriever.clear()
+        chunks_with_embeddings = [
+            {**chunk, "embedding": emb}
+            for chunk, emb in zip(self._all_chunks, embeddings)
+        ]
+        self.retriever.add_documents(chunks_with_embeddings)
+
+        logger.info("向量索引重建完成: %d 个块", len(self._all_chunks))
 
     def ingest_document(self, file_path: str) -> int:
         """
         导入单个文档到知识库。
 
-        当 scheduler 存在时，每个阶段通过调度器执行。
-        当 scheduler 为 None 时，直接执行各阶段。
+        流程：加载 -> 切块 -> 追加到全局 chunk 列表 -> 重建向量索引
 
         Args:
             file_path: 文档文件路径
@@ -84,154 +97,79 @@ class LocalDocAgent:
         logger.info(f"开始导入文档: {path.name}")
 
         if self.scheduler:
-            # 步骤 1：加载文档（通过调度器）
             doc = self.scheduler.execute(
                 BenchmarkTaskType.DOCUMENT_LOADING, self.loader.load_file, file_path
             )
-
-            # 步骤 2：文本分块（通过调度器）
             chunks = self.scheduler.execute(
                 BenchmarkTaskType.CHUNKING,
                 lambda: self.chunker.chunk_text(doc["content"], source=doc["source"]),
             )
         else:
-            t0 = time.time()
             doc = self.loader.load_file(file_path)
-            t_load = time.time() - t0
-            logger.info(f"  [加载] {t_load:.3f}s - {len(doc['content'])} 字符")
-
-            t0 = time.time()
             chunks = self.chunker.chunk_text(doc["content"], source=doc["source"])
-            t_chunk = time.time() - t0
-            logger.info(f"  [分块] {t_chunk:.3f}s - {len(chunks)} 个块")
 
         if not chunks:
             logger.warning(f"文档未产生任何文本块: {path.name}")
             return 0
 
-        if self.scheduler:
-            # 步骤 3：向量化（通过调度器）
-            embeddings = self.scheduler.execute(
-                BenchmarkTaskType.EMBEDDING, self.embedding_engine.embed_chunks, chunks
-            )
-        else:
-            t0 = time.time()
-            embeddings = self.embedding_engine.embed_chunks(chunks)
-            t_embed = time.time() - t0
-            logger.info(
-                f"  [向量化] {t_embed:.3f}s - "
-                f"维度 {len(embeddings[0]) if embeddings else 0}"
-            )
-
-        # 步骤 4：将向量关联到块并存入索引
-        chunks_with_embeddings = []
-        for chunk, embedding in zip(chunks, embeddings):
-            chunks_with_embeddings.append({**chunk, "embedding": embedding})
-
-        self.retriever.add_documents(chunks_with_embeddings)
-
-        # 更新统计
+        # 追加到全局 chunk 列表
+        self._all_chunks.extend(chunks)
         self._ingested_files.append(doc["source"])
-        self._total_chunks += len(chunks)
 
-        logger.info(
-            f"文档导入完成: {path.name} - {len(chunks)} 个块"
-        )
+        # 重建向量索引（所有 chunk 统一词汇表）
+        self._rebuild_index()
+
+        logger.info(f"文档导入完成: {path.name} - {len(chunks)} 个块，总块数 {len(self._all_chunks)}")
         return len(chunks)
 
     def ingest_directory(self, dir_path: str) -> int:
-        """批量导入目录下的所有文档。
-
-        先切块所有文档，再统一构建词汇表，最后统一向量化。
-        这保证了所有文档的向量维度一致。
-        """
+        """批量导入目录下的所有文档。"""
         logger.info(f"开始导入目录: {dir_path}")
         t_start = time.time()
 
         documents = self.loader.load_directory(dir_path)
         logger.info(f"  发现 {len(documents)} 个可加载文件")
 
-        # 阶段 1：切块所有文档
-        all_chunks = []
         for doc in documents:
             try:
                 chunks = self.chunker.chunk_text(doc["content"], source=doc["source"])
-                all_chunks.extend(chunks)
+                self._all_chunks.extend(chunks)
                 self._ingested_files.append(doc["source"])
             except Exception as e:
                 logger.error(f"处理文件失败 [{Path(doc['source']).name}]: {e}")
 
-        if not all_chunks:
-            logger.warning("目录未产生任何文本块")
-            return 0
-
-        # 阶段 2：统一构建词汇表（如果后端支持）
-        all_texts = [c["content"] for c in all_chunks]
-        if self.backend and hasattr(self.backend, 'fit_corpus'):
-            self.backend.fit_corpus(all_texts)
-
-        # 阶段 3：统一向量化
-        embeddings = self.embedding_engine.embed_chunks(all_chunks)
-
-        # 阶段 4：存入索引
-        chunks_with_embeddings = [
-            {**chunk, "embedding": emb}
-            for chunk, emb in zip(all_chunks, embeddings)
-        ]
-        self.retriever.add_documents(chunks_with_embeddings)
-        self._total_chunks += len(all_chunks)
+        # 统一重建索引
+        self._rebuild_index()
 
         elapsed = time.time() - t_start
-        logger.info(f"目录导入完成: {dir_path} - {len(all_chunks)} 个块, 耗时 {elapsed:.2f}s")
-        return len(all_chunks)
+        logger.info(f"目录导入完成: {dir_path} - {len(self._all_chunks)} 个块, 耗时 {elapsed:.2f}s")
+        return len(self._all_chunks)
 
     def query(self, question: str, top_k: int = 3) -> dict:
         """
         对知识库进行查询并生成回答。
 
-        当 scheduler 存在时，检索和生成阶段通过调度器执行。
-        返回结果中包含 backend_trace 字段记录各阶段的调度信息。
-
-        Args:
-            question: 用户问题
-            top_k: 检索返回的最相关文档块数量
-
         Returns:
-            字典，包含:
-            - 'answer': 生成的回答
-            - 'sources': 引用的来源文档列表
-            - 'latency': 查询总耗时
-            - 'retrieved_chunks': 检索到的文档块数量
-            - 'backend_trace': 各阶段调度日志（当 scheduler 存在时）
+            字典: answer, sources, latency, retrieved_chunks, backend_trace
         """
         logger.info(f"查询: '{question}' (top_k={top_k})")
         t_start = time.time()
         scheduling_log = []
 
         if self.scheduler:
-            # 步骤 1：检索相关文档块（通过调度器）
             relevant_chunks = self.scheduler.execute(
                 BenchmarkTaskType.RETRIEVAL, self.retriever.retrieve, question, top_k
             )
             scheduling_log.append(self.scheduler.get_execution_log()[-1])
 
-            # 步骤 2：生成回答（通过调度器）
             answer = self.scheduler.execute(
                 BenchmarkTaskType.GENERATION, self.generator.generate, question, relevant_chunks
             )
             scheduling_log.append(self.scheduler.get_execution_log()[-1])
         else:
-            t0 = time.time()
             relevant_chunks = self.retriever.retrieve(question, top_k=top_k)
-            t_retrieve = time.time() - t0
-            logger.info(f"  [检索] {t_retrieve:.3f}s - {len(relevant_chunks)} 个结果")
-
-            t0 = time.time()
             answer = self.generator.generate(question, relevant_chunks)
-            t_generate = time.time() - t0
-            logger.info(f"  [生成] {t_generate:.3f}s")
 
-        # 提取来源信息（去重）
         sources = list({
             chunk.get("source", "未知来源") for chunk in relevant_chunks
         })
@@ -245,7 +183,6 @@ class LocalDocAgent:
             "retrieved_chunks": len(relevant_chunks),
         }
 
-        # 当 scheduler 存在时，附加调度日志
         if self.scheduler and scheduling_log:
             result["backend_trace"] = [
                 {
@@ -258,48 +195,30 @@ class LocalDocAgent:
                 for entry in scheduling_log
             ]
 
-        logger.info(
-            f"查询完成: 耗时 {total_latency:.3f}s, 来源数 {len(sources)}"
-        )
+        logger.info(f"查询完成: {total_latency:.3f}s, 来源数 {len(sources)}")
         return result
 
     def get_stats(self) -> dict:
-        """
-        获取智能体的统计信息。
-
-        Returns:
-            字典，包含文档数、块数、后端、调度器状态等。
-        """
-        backend_name = "None (回退模式)"
-        if self.backend is not None:
-            backend_name = type(self.backend).__name__
-
-        stats = {
+        """获取智能体的统计信息。"""
+        backend_name = type(self.backend).__name__ if self.backend else "None (回退模式)"
+        return {
             "document_count": len(self._ingested_files),
-            "chunk_count": self.retriever.get_document_count(),
+            "chunk_count": len(self._all_chunks),
             "backend": backend_name,
             "ingested_files": list(self._ingested_files),
             "scheduler_enabled": self.scheduler is not None,
             "available_backends": list(self.scheduler.backends.keys()) if self.scheduler else [],
         }
 
-        if self.scheduler:
-            stats["scheduler_report"] = self.scheduler.get_schedule_report()
-
-        return stats
-
     # ============================================================
-    # 异步接口（asyncio）
+    # 异步接口
     # ============================================================
 
     async def aingest_document(self, file_path: str) -> int:
-        """异步导入单个文档。"""
         return await asyncio.to_thread(self.ingest_document, file_path)
 
     async def aingest_directory(self, dir_path: str) -> int:
-        """异步批量导入目录。"""
         return await asyncio.to_thread(self.ingest_directory, dir_path)
 
     async def aquery(self, question: str, top_k: int = 3) -> dict:
-        """异步查询接口。"""
         return await asyncio.to_thread(self.query, question, top_k)

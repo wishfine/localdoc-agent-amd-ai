@@ -185,15 +185,18 @@ class HeterogeneousScheduler:
         **kwargs: Any,
     ) -> Any:
         """
-        Execute a function on the best available backend for the given task type.
-        Tracks execution timing and logs the result.
+        Execute a function with scheduling policy logging.
+
+        The scheduler selects the best backend for the task type (policy decision),
+        then executes the provided function. The function itself determines which
+        backend actually performs the computation.
         """
         backend, reason = self.select_backend(task_type)
-        backend_name = getattr(backend, "name", type(backend).__name__)
+        selected_backend_name = getattr(backend, "name", type(backend).__name__)
 
         logger.info(
-            "Executing %s on %s (%s)",
-            task_type.value, backend_name, reason,
+            "Task %s: selected_backend=%s (%s)",
+            task_type.value, selected_backend_name, reason,
         )
 
         start_time = time.perf_counter()
@@ -209,18 +212,19 @@ class HeterogeneousScheduler:
             elapsed = time.perf_counter() - start_time
             entry = {
                 "task_type": task_type.value,
-                "backend": backend_name,
+                "selected_backend": selected_backend_name,
+                "backend": selected_backend_name,
                 "backend_key": self._find_backend_key(backend),
                 "reason": reason,
                 "elapsed_seconds": round(elapsed, 6),
                 "error": error_occurred,
-                "is_simulated": backend_name.startswith("Simulated"),
+                "is_simulated": selected_backend_name.startswith("Simulated"),
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             }
             self._execution_log.append(entry)
             logger.info(
-                "Task %s completed in %.4fs on %s",
-                task_type.value, elapsed, backend_name,
+                "Task %s completed in %.4fs (selected_backend=%s)",
+                task_type.value, elapsed, selected_backend_name,
             )
 
         return result

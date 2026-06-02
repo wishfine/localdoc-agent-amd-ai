@@ -38,19 +38,20 @@ class EmbeddingEngine:
 
     def __init__(self, backend=None) -> None:
         self.backend = backend
-        # TF-IDF 模式下的词汇表和 IDF 值
-        self._vocab: dict[str, int] = {}  # 词 -> 索引
-        self._idf: dict[str, float] = {}  # 词 -> IDF 值
-        self._fitted = False  # 是否已经拟合过语料
+        self._vocab: dict[str, int] = {}
+        self._idf: dict[str, float] = {}
+        self._fitted = False
 
         if backend is not None:
-            logger.info(
-                f"EmbeddingEngine 使用后端模式: {type(backend).__name__}"
-            )
+            logger.info(f"EmbeddingEngine 使用后端模式: {type(backend).__name__}")
         else:
-            logger.info(
-                "EmbeddingEngine 使用 TF-IDF 回退模式（无需 GPU/外部模型）"
-            )
+            logger.info("EmbeddingEngine 使用 TF-IDF 回退模式（无需 GPU/外部模型）")
+
+    def reset(self) -> None:
+        """重置 TF-IDF 状态。在重建索引前调用。"""
+        self._vocab = {}
+        self._idf = {}
+        self._fitted = False
 
     def embed_chunks(self, chunks: list) -> list:
         """
@@ -83,7 +84,7 @@ class EmbeddingEngine:
         """
         对查询文本进行向量化。
 
-        生成的向量维度与 embed_chunks 保持一致，以便进行相似度计算。
+        使用 transform() 而非 embed_texts()，避免查询文本污染语料库。
 
         Args:
             query: 查询文本
@@ -96,6 +97,14 @@ class EmbeddingEngine:
             return []
 
         if self.backend is not None:
+            # 使用 transform 避免修改语料库
+            if hasattr(self.backend, 'transform'):
+                try:
+                    vectors = self.backend.transform([query])
+                    return vectors[0] if vectors else []
+                except Exception as e:
+                    logger.error("后端 transform 失败: %s", e)
+            # 回退到 embed_texts（兼容没有 transform 的后端）
             vectors = self._embed_with_backend([query])
             return vectors[0] if vectors else []
         else:
@@ -106,19 +115,15 @@ class EmbeddingEngine:
         """
         使用后端进行向量化。
 
-        Args:
-            texts: 文本列表
-
-        Returns:
-            向量列表
+        优先使用 fit_and_embed（构建词汇表+计算向量），
+        回退到 embed_texts（兼容旧后端）。
         """
         try:
-            vectors = self.backend.embed_texts(texts)
-            return vectors
+            if hasattr(self.backend, 'fit_and_embed'):
+                return self.backend.fit_and_embed(texts)
+            return self.backend.embed_texts(texts)
         except Exception as e:
-            logger.error(
-                f"后端向量化失败，回退到 TF-IDF: {type(e).__name__}: {e}"
-            )
+            logger.error("后端向量化失败，回退到 TF-IDF: %s", e)
             return self._embed_with_tfidf(texts)
 
     def _embed_with_tfidf(self, texts: list[str]) -> list:
