@@ -109,16 +109,23 @@ def plot_latency_comparison(
         return None
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6), constrained_layout=True)
-    fig.suptitle("异构资源调度 - 延迟基准测试结果", fontsize=16, fontweight="bold")
+    fig.suptitle(
+        "异构资源调度 - 延迟基准测试结果\n"
+        "measurement_type 区分 real_hardware / simulated / unavailable",
+        fontsize=14, fontweight="bold",
+    )
 
+    # Support both old (benchmark_latency) and new (benchmark_real) test names
     test_types = [
-        ("ingestion", "文档摄入延迟", "文档数量", "doc_count"),
-        ("querying", "查询延迟", "Chunk 数量", "chunk_count"),
-        ("end_to_end", "端到端延迟", "文档数量", "doc_count"),
+        ("embedding", "文档摄入/嵌入延迟", "文档数量", "doc_count"),
+        ("query_embedding", "查询嵌入延迟", "Chunk 数量", "chunk_count"),
+        ("end_to_end_rag", "端到端 RAG 延迟", "文档数量", "doc_count"),
     ]
 
     for ax, (test_key, title, xlabel, xkey) in zip(axes, test_types):
         subset = [r for r in rows if r.get("test") == test_key]
+        # Filter out unavailable backends
+        subset = [r for r in subset if r.get("measurement_type") != "unavailable"]
         if not subset:
             ax.set_title(f"{title} (无数据)")
             continue
@@ -157,20 +164,34 @@ def plot_backend_comparison(
         print("  [跳过] backend_results.csv 为空或不存在")
         return None
 
+    # Filter out unavailable backends
+    rows = [r for r in rows if r.get("measurement_type") != "unavailable"]
+    if not rows:
+        print("  [跳过] backend_results.csv 无可用后端数据")
+        return None
+
     fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
-    fig.suptitle("后端性能对比 - 平均延迟", fontsize=16, fontweight="bold")
+    fig.suptitle(
+        "后端性能对比 - 平均延迟\n"
+        "(unavailable 后端已排除)",
+        fontsize=14, fontweight="bold",
+    )
 
     backends = [r["backend"] for r in rows]
     avg_ms = [r["avg_latency_ms"] for r in rows]
+    mtypes = [r.get("measurement_type", "unknown") for r in rows]
     colors = [BACKEND_COLORS.get(b, "#999999") for b in backends]
-    labels = [BACKEND_LABELS.get(b, b) for b in backends]
+    labels = [f"{BACKEND_LABELS.get(b, b)}\n[{mt}]" for b, mt in zip(backends, mtypes)]
 
     bars = ax.bar(labels, avg_ms, color=colors, edgecolor="white", linewidth=1.2)
 
     # Add value labels on bars
-    for bar, val in zip(bars, avg_ms):
+    for bar, val, mt in zip(bars, avg_ms, mtypes):
+        label = f"{val:.1f} ms"
+        if mt != "real_hardware":
+            label += "\n⚠️"
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(avg_ms) * 0.02,
-                f"{val:.1f} ms", ha="center", va="bottom", fontsize=11, fontweight="bold")
+                label, ha="center", va="bottom", fontsize=9, fontweight="bold")
 
     ax.set_ylabel("平均延迟 (ms)", fontsize=12)
     ax.set_xlabel("后端策略", fontsize=12)

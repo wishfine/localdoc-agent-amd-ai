@@ -260,7 +260,7 @@ bash run_benchmark.sh
 
 `run_benchmark.sh` 会自动调用 `experiments/benchmark_real.py`：
 - 如果检测到真实 AMD GPU/NPU 硬件，使用 `backend.fit_and_embed()` / `backend.transform()` 进行**真实推理测量**
-- 如果没有硬件，自动回退到 simulated 模式
+- 如果没有真实推理硬件，`benchmark_real.py` 自动回退到 simulated 模式（CSV `measurement_type=simulated`）。如果 NPU EP 检测到但推理仍为 CPU，标记为 `cpu_fallback_with_hardware_detected`（不标为 `real_hardware`）。unavailable 后端直接跳过，不参与性能汇总。
 - CSV 中 `measurement_type` 列区分 `real_hardware` 和 `simulated`
 - 同时运行 simulated 基准作为对比基线
 

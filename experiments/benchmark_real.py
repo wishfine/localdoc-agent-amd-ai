@@ -132,6 +132,13 @@ def classify_backend(name: str, info: Dict[str, Any]) -> str:
     return "cpu_fallback_with_hardware_detected"
 
 
+def _skip_backend(name: str, info: Dict[str, Any]) -> bool:
+    """Return True if backend should be skipped (unavailable)."""
+    if name == "SimulatedNPU":
+        return False  # Always include for comparison
+    return not info["available"]
+
+
 # ---------------------------------------------------------------------------
 # Real benchmark: embedding
 # ---------------------------------------------------------------------------
@@ -147,6 +154,8 @@ def benchmark_embedding(
         texts = chunk_texts(generate_test_documents(count))
 
         for name, info in backends.items():
+            if _skip_backend(name, info):
+                continue
             backend = info["backend"]
             mtype = classify_backend(name, info)
 
@@ -196,6 +205,8 @@ def benchmark_query(
         corpus = chunk_texts(generate_test_documents(5, size=200))[:count]
 
         for name, info in backends.items():
+            if _skip_backend(name, info):
+                continue
             backend = info["backend"]
             mtype = classify_backend(name, info)
 
@@ -253,6 +264,8 @@ def benchmark_generation(
 
     rows = []
     for name, info in backends.items():
+        if _skip_backend(name, info):
+            continue
         backend = info["backend"]
         mtype = classify_backend(name, info)
 
@@ -298,6 +311,8 @@ def benchmark_e2e_rag(
 
     for count in doc_counts:
         for name, info in backends.items():
+            if _skip_backend(name, info):
+                continue
             backend = info["backend"]
             mtype = classify_backend(name, info)
 
