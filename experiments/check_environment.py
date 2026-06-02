@@ -81,13 +81,23 @@ def check_kernel() -> dict:
     - Ubuntu 24.04 HWE: >= 6.17.0-19.19~24.04.2
     - Ubuntu 24.04 OEM: >= 6.14.0-1018
     - Other distros: >= 6.18.4
-    We use 6.14 as "might work" threshold and 6.18 as "likely stable" threshold.
+    Only applies to Linux. macOS/Windows skip the check.
     """
     result = {
         "kernel_version": platform.release(),
         "is_strix_halo_compatible": None,
         "min_kernel_note": "",
     }
+
+    # Only check on Linux
+    if platform.system() != "Linux":
+        result["is_strix_halo_compatible"] = None
+        result["min_kernel_note"] = (
+            f"Platform is {platform.system()}, not Linux. "
+            "Strix Halo kernel check skipped."
+        )
+        return result
+
     try:
         kernel = platform.release()
         parts = kernel.split(".")

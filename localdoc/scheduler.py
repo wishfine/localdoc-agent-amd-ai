@@ -1,13 +1,22 @@
 """
 异构资源调度器 - Heterogeneous Resource Scheduler
 
-根据任务类型自动选择最优硬件后端：
+根据任务类型自动选择最优硬件后端（策略决策层）：
 - document_loading → CPU
 - chunking → CPU
 - embedding → NPU preferred, GPU second, CPU fallback
 - retrieval → GPU preferred, CPU fallback
 - generation → GPU preferred, CPU fallback
 - report_generation → GPU preferred, CPU fallback
+
+设计说明：
+本调度器是"策略决策 + 日志记录"层，负责决定每个任务应该分配到哪个后端，
+并记录分配原因和执行时间。实际计算由调用方（Agent）的组件执行，
+组件内部使用各自初始化时绑定的后端。
+调度器不直接调用后端的 embed_texts/generate_answer 方法。
+
+在当前 CPU fallback + simulated backend 模式下，调度日志中的
+"GPU"/"NPU" 表示"策略上应该使用该后端"，实际仍在 CPU 上执行。
 """
 
 from enum import Enum

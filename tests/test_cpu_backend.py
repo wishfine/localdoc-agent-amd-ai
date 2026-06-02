@@ -53,8 +53,8 @@ def test_embed_texts_single_text():
     assert len(vectors[0]) > 0
 
 
-def test_embed_texts_vocab_grows():
-    """Vocab must grow when new words appear."""
+def test_embed_texts_vocab_frozen_after_first_call():
+    """Vocab must freeze after first call (P0 fix: dimension consistency)."""
     backend = CPUBackend()
     vecs1 = backend.embed_texts(["苹果 香蕉"])
     dim1 = len(vecs1[0])
@@ -62,8 +62,8 @@ def test_embed_texts_vocab_grows():
     vecs2 = backend.embed_texts(["葡萄 西瓜"])
     dim2 = len(vecs2[0])
 
-    # New words should expand the vocab
-    assert dim2 > dim1, f"Vocab didn't grow: {dim1} -> {dim2}"
+    # Vocab is frozen after first call — dimensions must match
+    assert dim2 == dim1, f"Vocab changed after freeze: {dim1} -> {dim2}"
 
 
 def test_generate_answer_with_string_context():

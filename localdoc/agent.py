@@ -140,41 +140,50 @@ class LocalDocAgent:
         return len(chunks)
 
     def ingest_directory(self, dir_path: str) -> int:
-        """批量导入目录下的所有文档。"""
+        """批量导入目录下的所有文档。
+
+        先切块所有文档，再统一构建词汇表，最后统一向量化。
+        这保证了所有文档的向量维度一致。
+        """
         logger.info(f"开始导入目录: {dir_path}")
         t_start = time.time()
 
         documents = self.loader.load_directory(dir_path)
         logger.info(f"  发现 {len(documents)} 个可加载文件")
 
-        total_chunks = 0
-        for i, doc in enumerate(documents, 1):
-            source_name = Path(doc["source"]).name
-            logger.info(f"  处理 [{i}/{len(documents)}]: {source_name}")
-
+        # 阶段 1：切块所有文档
+        all_chunks = []
+        for doc in documents:
             try:
                 chunks = self.chunker.chunk_text(doc["content"], source=doc["source"])
-                if not chunks:
-                    continue
-
-                embeddings = self.embedding_engine.embed_chunks(chunks)
-                chunks_with_embeddings = [
-                    {**chunk, "embedding": emb}
-                    for chunk, emb in zip(chunks, embeddings)
-                ]
-
-                self.retriever.add_documents(chunks_with_embeddings)
+                all_chunks.extend(chunks)
                 self._ingested_files.append(doc["source"])
-                self._total_chunks += len(chunks)
-                total_chunks += len(chunks)
-
             except Exception as e:
-                logger.error(f"处理文件失败 [{source_name}]: {type(e).__name__}: {e}")
-                continue
+                logger.error(f"处理文件失败 [{Path(doc['source']).name}]: {e}")
+
+        if not all_chunks:
+            logger.warning("目录未产生任何文本块")
+            return 0
+
+        # 阶段 2：统一构建词汇表（如果后端支持）
+        all_texts = [c["content"] for c in all_chunks]
+        if self.backend and hasattr(self.backend, 'fit_corpus'):
+            self.backend.fit_corpus(all_texts)
+
+        # 阶段 3：统一向量化
+        embeddings = self.embedding_engine.embed_chunks(all_chunks)
+
+        # 阶段 4：存入索引
+        chunks_with_embeddings = [
+            {**chunk, "embedding": emb}
+            for chunk, emb in zip(all_chunks, embeddings)
+        ]
+        self.retriever.add_documents(chunks_with_embeddings)
+        self._total_chunks += len(all_chunks)
 
         elapsed = time.time() - t_start
-        logger.info(f"目录导入完成: {dir_path} - {total_chunks} 个块, 耗时 {elapsed:.2f}s")
-        return total_chunks
+        logger.info(f"目录导入完成: {dir_path} - {len(all_chunks)} 个块, 耗时 {elapsed:.2f}s")
+        return len(all_chunks)
 
     def query(self, question: str, top_k: int = 3) -> dict:
         """

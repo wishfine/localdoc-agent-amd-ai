@@ -6,13 +6,11 @@ CPU 后端实现 - LocalDoc Agent 基线计算引擎
 
 嵌入方法采用 TF-IDF 思路的纯 Python 实现（collections.Counter），
 无需安装 sklearn 等第三方依赖即可运行。
-若环境中已安装 sklearn，则可选择使用更高效的实现。
 
-典型用途：
-    backend = CPUBackend()
-    if backend.is_available():
-        vectors = backend.embed_texts(["你好世界", "异构计算"])
-        answer = backend.generate_answer("什么是异构计算?", context_docs)
+TF-IDF 生命周期：
+- fit_corpus(corpus): 在语料库上构建词汇表和 IDF（摄入阶段调用一次）
+- embed_texts(texts): 使用已冻结的词汇表将文本转为向量（查询阶段调用）
+- 如果未调用 fit_corpus，embed_texts 会自动调用
 """
 
 import math
@@ -36,153 +34,113 @@ class CPUBackend:
 
     此后端始终可用，不依赖任何特殊硬件或第三方库。
 
-    TF-IDF 词汇表在 embed_texts 调用间持久化，
-    保证摄入阶段和查询阶段的向量维度一致。
+    TF-IDF 生命周期：
+    1. fit_corpus(corpus): 在摄入的全部文档上构建词汇表和 IDF 值
+    2. embed_texts(texts): 使用冻结的词汇表计算向量（查询时不扩展词表）
     """
 
-    # ---------- 属性 ----------
-
     def __init__(self) -> None:
-        # 持久化 TF-IDF 状态：累积语料库和词汇表
-        self._corpus: List[str] = []           # 所有已见过的文本
-        self._vocab: Optional[List[str]] = None  # 当前词汇表
-        self._idf: Optional[List[float]] = None  # 当前 IDF 值
+        self._corpus: List[str] = []
+        self._vocab: Optional[List[str]] = None
+        self._idf: Optional[List[float]] = None
         self._vocab_index: Optional[dict] = None
-
-    # ---------- 属性 ----------
+        self._vocab_frozen: bool = False
 
     @property
     def name(self) -> str:
-        """返回后端名称标识。"""
         return "CPU"
 
-    # ---------- 可用性检查 ----------
-
     def is_available(self) -> bool:
-        """
-        检查 CPU 后端是否可用。
-
-        CPU 后端始终可用，因为每台设备都有 CPU。
-
-        Returns:
-            始终返回 True
-        """
         return True
 
     # ---------- 文本嵌入 ----------
 
     @staticmethod
     def _tokenize(text: str) -> List[str]:
-        """
-        简单分词器：按非字母数字字符切分，转小写。
-
-        对中文文本，按单字切分；对英文/数字按空格和标点切分。
-
-        Args:
-            text: 输入文本
-
-        Returns:
-            分词后的 token 列表
-        """
-        # 中文字符：逐字拆分（中文无天然空格分隔）
+        """简单分词器：中文逐字拆分，英文按空格/标点拆分。"""
         chinese_chars = re.findall(r'[一-鿿]', text)
-        # 英文和数字 token
         latin_tokens = re.findall(r'[a-zA-Z0-9]+', text.lower())
         return chinese_chars + latin_tokens
 
-    def _build_tfidf(self, texts: List[str]) -> tuple:
+    def fit_corpus(self, corpus: List[str]) -> None:
         """
-        将新文本加入累积语料库，重建 TF-IDF 词汇表和 IDF 值。
+        在语料库上构建 TF-IDF 词汇表和 IDF 值。
 
-        词汇表只增不减，保证后续调用返回的向量维度 >= 之前调用的维度。
-        对查询文本返回的向量会自动补零对齐到当前最大维度。
+        调用后词汇表冻结，后续 embed_texts 不会扩展词表。
+        这保证了摄入阶段和查询阶段的向量维度一致。
 
         Args:
-            texts: 本次要嵌入的文本列表
-
-        Returns:
-            (vectors, vocab_size): 向量列表和当前词汇表大小
+            corpus: 完整的文档文本列表
         """
-        # 将新文本追加到累积语料库
-        self._corpus.extend(texts)
+        self._corpus = list(corpus)
+        self._vocab_frozen = False
 
-        # 对整个累积语料库分词
-        tokenized_corpus: List[List[str]] = [self._tokenize(t) for t in self._corpus]
+        tokenized = [self._tokenize(t) for t in self._corpus]
 
-        # 构建全局词汇表（只增不减）
         vocab_set: set = set()
-        for tokens in tokenized_corpus:
+        for tokens in tokenized:
             vocab_set.update(tokens)
         feature_names: List[str] = sorted(vocab_set)
-        vocab_index = {word: i for i, word in enumerate(feature_names)}
+        self._vocab_index = {word: i for i, word in enumerate(feature_names)}
+        self._vocab = feature_names
         vocab_size = len(feature_names)
-        n_docs = len(self._corpus)
 
-        # 计算 IDF：log(N / (1 + df))
+        n_docs = len(self._corpus)
         doc_freq: Counter = Counter()
-        for tokens in tokenized_corpus:
-            unique_tokens = set(tokens)
-            for t in unique_tokens:
+        for tokens in tokenized:
+            for t in set(tokens):
                 doc_freq[t] += 1
 
-        idf = [0.0] * vocab_size
-        for word, idx in vocab_index.items():
-            idf[idx] = math.log((n_docs + 1) / (1 + doc_freq[word])) + 1.0
+        self._idf = [0.0] * vocab_size
+        for word, idx in self._vocab_index.items():
+            self._idf[idx] = math.log((n_docs + 1) / (1 + doc_freq[word])) + 1.0
 
-        # 持久化词汇表
-        self._vocab = feature_names
-        self._idf = idf
-        self._vocab_index = vocab_index
-
-        # 只对本次传入的 texts 计算向量
-        tokenized_new = [self._tokenize(t) for t in texts]
-        vectors: List[List[float]] = []
-        for tokens in tokenized_new:
-            tf = Counter(tokens)
-            total = len(tokens) if tokens else 1
-            vec = [0.0] * vocab_size
-            for word, count in tf.items():
-                if word in vocab_index:
-                    idx = vocab_index[word]
-                    vec[idx] = (count / total) * idf[idx]
-
-            # L2 归一化
-            norm = math.sqrt(sum(v * v for v in vec))
-            if norm > 0:
-                vec = [v / norm for v in vec]
-
-            vectors.append(vec)
-
-        return vectors, vocab_size
+        self._vocab_frozen = True
+        logger.info("CPU 后端：词汇表构建完成，维度 = %d，文档数 = %d", vocab_size, n_docs)
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """
-        使用纯 Python TF-IDF 方法将文本转换为向量表示。
+        使用 TF-IDF 将文本转为向量。
 
-        此方法不依赖任何第三方库，可在任意环境下运行。
-        作为异构计算实验的 CPU 基线。
+        如果词汇表已冻结（fit_corpus 已调用），使用冻结词表计算向量，
+        不扩展词表。这保证查询向量与文档向量维度一致。
+
+        如果词汇表未冻结（fit_corpus 未调用），自动构建词表。
 
         Args:
             texts: 待嵌入的文本列表
 
         Returns:
-            List[List[float]]: 每条文本对应的 TF-IDF 向量，
-            所有向量维度一致（等于全局词汇表大小）
-
-        Example:
-            >>> backend = CPUBackend()
-            >>> vecs = backend.embed_texts(["hello world", "world peace"])
-            >>> len(vecs) == 2
-            True
+            向量列表，所有向量维度一致
         """
         if not texts:
             return []
 
-        logger.info("CPU 后端：开始对 %d 条文本进行 TF-IDF 嵌入", len(texts))
-        vectors, vocab_size = self._build_tfidf(texts)
-        logger.info(
-            "CPU 后端：嵌入完成，向量维度 = %d", vocab_size
-        )
+        if not self._vocab_frozen:
+            self.fit_corpus(texts)
+
+        logger.info("CPU 后端：嵌入 %d 条文本，向量维度 = %d", len(texts), len(self._vocab))
+        return self._compute_vectors(texts)
+
+    def _compute_vectors(self, texts: List[str]) -> List[List[float]]:
+        """使用当前冻结的词汇表计算向量。"""
+        vocab_size = len(self._vocab)
+        vectors: List[List[float]] = []
+
+        for text in texts:
+            tokens = self._tokenize(text)
+            tf = Counter(tokens)
+            total = len(tokens) if tokens else 1
+            vec = [0.0] * vocab_size
+            for word, count in tf.items():
+                if word in self._vocab_index:
+                    idx = self._vocab_index[word]
+                    vec[idx] = (count / total) * self._idf[idx]
+            norm = math.sqrt(sum(v * v for v in vec))
+            if norm > 0:
+                vec = [v / norm for v in vec]
+            vectors.append(vec)
+
         return vectors
 
     # ---------- 问答生成 ----------
@@ -196,18 +154,11 @@ class CPUBackend:
         """
         基于关键词匹配的抽取式问答。
 
-        从 context 中选择与 query 关键词重叠最多的句子作为答案。
-        这是一个简单的基线实现，用于与 GPU/NPU 后端对比。
-
         Args:
             query: 用户提出的问题
             context: 上下文，可以是字符串或字符串列表
             max_length: 答案最大字符数
-
-        Returns:
-            str: 生成的答案文本；若无匹配上下文则返回默认提示
         """
-        # 统一处理：将 context 转为字符串列表
         if isinstance(context, str):
             context_list = [context]
         elif isinstance(context, list):
@@ -216,63 +167,36 @@ class CPUBackend:
             context_list = [str(context)]
 
         if not context_list or all(not c for c in context_list):
-            logger.warning("CPU 后端：未提供上下文，无法生成答案")
             return "抱歉，未找到相关上下文信息，无法回答该问题。"
-
-        logger.info("CPU 后端：开始基于关键词匹配生成答案")
 
         query_tokens = set(self._tokenize(query))
         if not query_tokens:
             return "抱歉，无法解析您的问题，请尝试重新表述。"
 
-        # 将每条上下文切分为句子，然后对每个句子打分
         best_sentence = ""
         best_score = 0
 
         for doc in context_list:
-            # 按中英文标点和换行切分句子
             sentences = re.split(r'[。！？.!?\n]+', doc)
             for sentence in sentences:
                 sentence = sentence.strip()
                 if not sentence:
                     continue
                 sentence_tokens = set(self._tokenize(sentence))
-                # 评分 = query 关键词在句子中的命中数
                 score = len(query_tokens & sentence_tokens)
                 if score > best_score:
                     best_score = score
                     best_sentence = sentence
 
         if best_sentence:
-            # 截断到最大长度
-            answer = best_sentence[:max_length]
-            logger.info("CPU 后端：找到匹配句子，关键词命中数 = %d", best_score)
-            return answer
+            return best_sentence[:max_length]
 
-        logger.info("CPU 后端：未找到高度匹配的句子，返回上下文首句")
-        # 退化策略：返回第一条上下文的前 max_length 个字符
-        fallback = context_list[0][:max_length]
-        return fallback
+        return context_list[0][:max_length]
 
     # ---------- 性能基准测试 ----------
 
     def benchmark_embedding(self, texts: List[str]) -> dict:
-        """
-        对 embed_texts 进行计时基准测试。
-
-        Args:
-            texts: 测试用文本列表
-
-        Returns:
-            dict: 包含以下字段：
-                - backend: 后端名称
-                - num_texts: 文本数量
-                - elapsed_seconds: 耗时（秒）
-                - vectors_per_second: 吞吐量
-                - embedding_dim: 输出向量维度
-        """
-        logger.info("CPU 后端：开始嵌入基准测试，文本数 = %d", len(texts))
-
+        """对 embed_texts 进行计时基准测试。"""
         start = time.perf_counter()
         vectors = self.embed_texts(texts)
         elapsed = time.perf_counter() - start
@@ -280,46 +204,23 @@ class CPUBackend:
         dim = len(vectors[0]) if vectors else 0
         throughput = len(texts) / elapsed if elapsed > 0 else float("inf")
 
-        result = {
+        return {
             "backend": self.name,
             "num_texts": len(texts),
             "elapsed_seconds": round(elapsed, 6),
             "vectors_per_second": round(throughput, 2),
             "embedding_dim": dim,
         }
-        logger.info("CPU 后端：嵌入基准测试完成 - %.4f 秒", elapsed)
-        return result
 
-    def benchmark_generation(
-        self,
-        query: str,
-        context: List[str],
-    ) -> dict:
-        """
-        对 generate_answer 进行计时基准测试。
-
-        Args:
-            query: 测试查询
-            context: 上下文文档列表
-
-        Returns:
-            dict: 包含以下字段：
-                - backend: 后端名称
-                - elapsed_seconds: 耗时（秒）
-                - answer_length: 答案长度（字符数）
-                - num_context_docs: 上下文文档数量
-        """
-        logger.info("CPU 后端：开始生成基准测试")
-
+    def benchmark_generation(self, query: str, context: List[str]) -> dict:
+        """对 generate_answer 进行计时基准测试。"""
         start = time.perf_counter()
         answer = self.generate_answer(query, context)
         elapsed = time.perf_counter() - start
 
-        result = {
+        return {
             "backend": self.name,
             "elapsed_seconds": round(elapsed, 6),
             "answer_length": len(answer),
             "num_context_docs": len(context),
         }
-        logger.info("CPU 后端：生成基准测试完成 - %.4f 秒", elapsed)
-        return result
