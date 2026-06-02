@@ -97,15 +97,16 @@ fi
 # ====== 第 2 步: 延迟基准测试 ======
 echo ""
 echo "============================================"
-echo "  第 2 步: 延迟基准测试 (Simulated)"
+echo "  第 2 步: 延迟基准测试 (自动检测硬件)"
 echo "============================================"
 echo ""
 
-info "开始基准测试 (使用合成数据，完全离线) ..."
+info "开始基准测试 ..."
+info "如有真实 AMD GPU/NPU 硬件，将自动使用真实后端"
+info "如无硬件，将使用 simulated 模式（所有数据标记为 simulated）"
 echo ""
 
-if python "$SCRIPT_DIR/experiments/benchmark_latency.py" \
-    --output-dir "$SCRIPT_DIR/results" \
+if python "$SCRIPT_DIR/experiments/benchmark_real.py" \
     $BENCHMARK_ARGS; then
     info "基准测试完成。"
 else
