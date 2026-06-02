@@ -81,7 +81,7 @@ class AnswerGenerator:
         try:
             # 后端 generate_answer 接口统一接受 context: str
             answer = self.backend.generate_answer(query=query, context=context_str)
-            logger.info(f"后端生成回答成功 (%d 字符)", len(answer))
+            logger.info("后端生成回答成功 (%d 字符)", len(answer))
             return answer
         except Exception as e:
             logger.error(

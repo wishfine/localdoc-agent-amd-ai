@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 RESULTS_DIR = PROJECT_ROOT / "results"
 
 MODEL_DIR = PROJECT_ROOT / "models" / "qwen3-1.7b"
@@ -67,12 +68,13 @@ def main():
                 "model_load_time_s", "generation_time_s",
                 "input_chars", "output_chars", "input_tokens", "output_tokens",
                 "tokens_per_second", "memory_before_mb", "memory_after_mb",
-                "is_local_llm", "is_amd_hardware_benchmark", "note",
+                "is_local_llm", "is_amd_hardware_benchmark",
+                "is_rocm_runtime_detected", "note",
             ])
             writer.writerow([
                 "SKIPPED", "Model not found", "Qwen3-1.7B", "Qwen/Qwen3-1.7B",
                 "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A",
-                "N/A", "N/A", "N/A", True, False,
+                "N/A", "N/A", "N/A", True, False, False,
                 "Model not found. Skipped. Not AMD hardware benchmark.",
             ])
         print(f"\n已写入: {csv_path}")

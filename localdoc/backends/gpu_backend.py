@@ -310,7 +310,7 @@ class AMDGPUBackend:
                     sentence_doc_map.append(doc_idx)
 
         if not all_sentences:
-            return context[0][:max_length]
+            return context_list[0][:max_length]
 
         # 计算每个句子的 token 集合
         sentence_token_sets = [set(self._tokenize(s)) for s in all_sentences]

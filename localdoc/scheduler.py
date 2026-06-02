@@ -15,7 +15,9 @@ import time
 import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-logger = logging.getLogger(__name__)
+from localdoc.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class BenchmarkTaskType(Enum):

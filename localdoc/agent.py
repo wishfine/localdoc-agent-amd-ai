@@ -285,15 +285,12 @@ class LocalDocAgent:
 
     async def aingest_document(self, file_path: str) -> int:
         """异步导入单个文档。"""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.ingest_document, file_path)
+        return await asyncio.to_thread(self.ingest_document, file_path)
 
     async def aingest_directory(self, dir_path: str) -> int:
         """异步批量导入目录。"""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.ingest_directory, dir_path)
+        return await asyncio.to_thread(self.ingest_directory, dir_path)
 
     async def aquery(self, question: str, top_k: int = 3) -> dict:
         """异步查询接口。"""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.query, question, top_k)
+        return await asyncio.to_thread(self.query, question, top_k)

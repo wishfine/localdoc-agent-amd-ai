@@ -229,7 +229,7 @@ def main():
         f"  可用 EP 列表: {ort_info['available_providers']}",
         f"  VitisAIExecutionProvider: {ort_info['vitisai_available']}",
         f"  DmlExecutionProvider: {ort_info['directml_available']}",
-        f"  RyzenAIExecutionProvider: {'RyzenAIExecutionProvider' in ort_info.get('available_providers', [])}",
+        f"  RyzenAIExecutionProvider: {ort_info.get('ryzenai_available', False)}",
         "",
         "## 结论",
         f"  ROCm GPU available: {conclusion['rocm_gpu_available']}",

@@ -17,7 +17,6 @@
 
 import argparse
 import csv
-import os
 import random
 import string
 import sys

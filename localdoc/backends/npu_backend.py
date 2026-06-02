@@ -315,7 +315,7 @@ class AMDNPUBackend:
                     all_sentences.append(s)
 
         if not all_sentences:
-            return context[0][:max_length]
+            return context_list[0][:max_length]
 
         sentence_token_sets = [set(self._tokenize(s)) for s in all_sentences]
 

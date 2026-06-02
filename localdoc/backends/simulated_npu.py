@@ -225,7 +225,7 @@ class SimulatedNPUBackend:
                     all_sentences.append(s)
 
         if not all_sentences:
-            return context[0][:max_length]
+            return context_list[0][:max_length]
 
         best_sentence = ""
         best_score = 0

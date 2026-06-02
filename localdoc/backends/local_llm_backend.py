@@ -184,6 +184,9 @@ class LocalLLMBackend:
         """
         self._lazy_load()
 
+        if not self._loaded:
+            return "本地 LLM 加载失败，无法生成回答。请检查模型文件和依赖。"
+
         context = context or ""
         context = context[: self.context_chars]
 

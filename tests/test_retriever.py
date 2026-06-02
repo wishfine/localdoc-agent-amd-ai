@@ -1,10 +1,5 @@
 """Tests for DocumentRetriever class."""
 
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 import pytest
 from localdoc.embedding import EmbeddingEngine
 from localdoc.retriever import DocumentRetriever

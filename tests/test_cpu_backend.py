@@ -1,9 +1,5 @@
 """Tests for CPUBackend class — regression tests for P0-1 and vocab persistence."""
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 import pytest
 from localdoc.backends.cpu_backend import CPUBackend
 

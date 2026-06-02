@@ -251,7 +251,7 @@ class CPUBackend:
 
         logger.info("CPU 后端：未找到高度匹配的句子，返回上下文首句")
         # 退化策略：返回第一条上下文的前 max_length 个字符
-        fallback = context[0][:max_length]
+        fallback = context_list[0][:max_length]
         return fallback
 
     # ---------- 性能基准测试 ----------

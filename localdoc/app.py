@@ -15,7 +15,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-logger = logging.getLogger(__name__)
+from localdoc.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def _build_agent(simulate_npu: bool = False):
