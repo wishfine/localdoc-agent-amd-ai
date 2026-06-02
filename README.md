@@ -141,8 +141,8 @@ python -m pytest tests/ -v
 | 文件路径 | 说明 |
 |----------|------|
 | `results/environment_report.txt` | 环境检测报告（硬件、驱动、后端可用性） |
-| `results/latency_results.csv` | 延迟基准测试结果（当前全部为模拟数据） |
-| `results/backend_results.csv` | 多后端对比结果（当前全部为模拟数据） |
+| `results/latency_results.csv` | 延迟基准测试结果（CSV 中 `measurement_type` 列区分 real/simulated） |
+| `results/backend_results.csv` | 多后端对比结果（含 `real_inference` 字段） |
 | `results/resource_usage.csv` | 系统资源使用快照 |
 | `figures/*.png` | 性能对比图表 |
 

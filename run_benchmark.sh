@@ -9,9 +9,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "============================================"
-echo "  运行异构资源调度仿真实验"
+echo "  运行异构资源调度基准测试"
 echo "  LocalDoc Agent - AMD 锐龙 AI MAX+"
-echo "  ⚠️ 当前为 simulated benchmark"
+echo "  自动检测硬件：有真实 GPU/NPU 则实测，否则 simulated"
 echo "============================================"
 echo ""
 

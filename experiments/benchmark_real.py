@@ -1,32 +1,32 @@
 """
 Real Hardware Benchmark (with simulated fallback)
 
-When real AMD GPU/NPU hardware is detected, benchmarks use actual backend
-methods (embed_texts, generate_answer). When no hardware is available,
-falls back to simulated mode with clear labeling.
+When real AMD GPU/NPU hardware is detected AND the backend performs real
+inference (not just CPU fallback), benchmarks use actual backend methods.
+Otherwise falls back to simulated mode with clear labeling.
 
-This replaces the pure-simulated benchmark_latency.py for hardware-capable
-environments. On CPU-only machines, it produces the same simulated data
-but with explicit "measurement_type" column distinguishing real from sim.
+Key distinction:
+- is_available() = EP/driver detected (necessary but not sufficient)
+- has_real_inference() = backend actually runs computation on that hardware
+
+For NPU: current implementation does NumPy normalization even when EP is
+detected, so has_real_inference() returns False until real ONNX session
+is implemented.
 
 Output:
-- results/latency_results.csv (unified: real or simulated per row)
-- results/backend_results.csv (summary with measurement_type)
+- results/latency_results.csv
+- results/backend_results.csv
 - results/resource_usage.csv
-
-Usage:
-    python experiments/benchmark_real.py
-    python experiments/benchmark_real.py --mode simulated   # force simulated
-    python experiments/benchmark_real.py --mode real        # force real (fails if no HW)
 """
 
 import argparse
 import csv
 import random
+import re
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -41,7 +41,7 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Synthetic document generation (shared with benchmark_latency.py)
+# Synthetic data
 # ---------------------------------------------------------------------------
 
 _PLACEHOLDER_SENTENCES = [
@@ -55,11 +55,6 @@ _PLACEHOLDER_SENTENCES = [
     "向量嵌入技术将文本转换为数值表示用于语义检索。",
     "余弦相似度是衡量向量方向接近程度的经典方法。",
     "TF-IDF 通过词频和逆文档频率衡量词语的重要性。",
-    "文本切块策略需要平衡语义完整性和检索粒度。",
-    "异构调度器根据任务计算特征选择最优硬件后端。",
-    "ROCm 是 AMD 的 GPU 计算平台，支持 HIP 编程模型。",
-    "XDNA 架构的 NPU 提供高效的端侧 AI 推理能力。",
-    "统一内存架构使 CPU、GPU、NPU 可以共享系统内存。",
 ]
 
 
@@ -71,243 +66,319 @@ def generate_test_documents(count: int, size: int = 500) -> List[str]:
     return docs
 
 
+def chunk_texts(texts: List[str]) -> List[str]:
+    """Simple sentence-level chunking."""
+    chunks = []
+    for text in texts:
+        sentences = re.split(r'[。！？.!?\n]+', text)
+        chunks.extend([s.strip() for s in sentences if s.strip()])
+    return chunks
+
+
 # ---------------------------------------------------------------------------
 # Hardware detection
 # ---------------------------------------------------------------------------
 
-def detect_backends() -> Dict[str, Any]:
-    """Detect available real backends. Returns dict of backend instances."""
+def detect_backends() -> Dict[str, Dict[str, Any]]:
+    """
+    Detect available backends and their real inference status.
+
+    Returns dict: name -> {"backend": instance, "available": bool, "real_inference": bool}
+    """
     from localdoc.backends.cpu_backend import CPUBackend
 
-    backends = {"CPU": CPUBackend()}
+    result = {"CPU": {"backend": CPUBackend(), "available": True, "real_inference": True}}
 
-    # Try GPU
     try:
         from localdoc.backends.gpu_backend import AMDGPUBackend
         gpu = AMDGPUBackend()
-        if gpu.is_available():
-            backends["GPU"] = gpu
+        avail = gpu.is_available()
+        real = gpu.has_real_inference() if hasattr(gpu, 'has_real_inference') else avail
+        result["GPU"] = {"backend": gpu, "available": avail, "real_inference": real}
     except Exception:
         pass
 
-    # Try NPU
     try:
         from localdoc.backends.npu_backend import AMDNPUBackend
         npu = AMDNPUBackend()
-        if npu.is_available():
-            backends["NPU"] = npu
+        avail = npu.is_available()
+        real = npu.has_real_inference() if hasattr(npu, 'has_real_inference') else False
+        result["NPU"] = {"backend": npu, "available": avail, "real_inference": real}
     except Exception:
         pass
 
-    # Always add simulated NPU for comparison
     try:
         from localdoc.backends.simulated_npu import SimulatedNPUBackend
-        backends["SimulatedNPU"] = SimulatedNPUBackend()
+        result["SimulatedNPU"] = {
+            "backend": SimulatedNPUBackend(),
+            "available": True,
+            "real_inference": False,
+        }
     except Exception:
         pass
 
-    return backends
+    return result
+
+
+def classify_backend(name: str, info: Dict[str, Any]) -> str:
+    """Return measurement_type string for a backend."""
+    if name == "SimulatedNPU":
+        return "simulated"
+    if not info["available"]:
+        return "unavailable"
+    if info["real_inference"]:
+        return "real_hardware"
+    # Available but no real inference (e.g., NPU EP detected but NumPy fallback)
+    return "cpu_fallback_with_hardware_detected"
 
 
 # ---------------------------------------------------------------------------
-# Real benchmark (uses actual backend methods)
+# Real benchmark: embedding
 # ---------------------------------------------------------------------------
 
-def benchmark_real_ingest(
+def benchmark_embedding(
     doc_counts: List[int],
-    backends: Dict[str, Any],
+    backends: Dict[str, Dict[str, Any]],
     repeats: int = 3,
 ) -> List[Dict[str, Any]]:
-    """Benchmark real document ingestion using actual backend embed_texts."""
-    from localdoc.backends.cpu_backend import CPUBackend
-
+    """Benchmark embedding using actual backend methods."""
     rows = []
     for count in doc_counts:
-        docs = generate_test_documents(count)
-        all_texts = []
-        for doc in docs:
-            # Simple chunking: split by sentences
-            import re
-            sentences = re.split(r'[。！？.!?\n]+', doc)
-            all_texts.extend([s.strip() for s in sentences if s.strip()])
+        texts = chunk_texts(generate_test_documents(count))
 
-        for backend_name, backend in backends.items():
-            if backend_name == "SimulatedNPU":
-                continue  # Skip simulated in real benchmark
+        for name, info in backends.items():
+            backend = info["backend"]
+            mtype = classify_backend(name, info)
 
-            total_time = 0.0
+            total = 0.0
             for _ in range(repeats):
-                # Reset corpus for CPUBackend
                 if hasattr(backend, 'reset_corpus'):
                     backend.reset_corpus()
-
                 t0 = time.perf_counter()
                 if hasattr(backend, 'fit_and_embed'):
-                    backend.fit_and_embed(all_texts)
+                    backend.fit_and_embed(texts)
                 elif hasattr(backend, 'embed_texts'):
-                    backend.embed_texts(all_texts)
-                total_time += time.perf_counter() - t0
+                    backend.embed_texts(texts)
+                total += time.perf_counter() - t0
 
-            avg_time = total_time / repeats
-
-            # Get hardware info
-            is_sim = backend_name == "SimulatedNPU"
-            device_info = {}
-            if hasattr(backend, 'get_device_info'):
-                device_info = backend.get_device_info()
-
+            avg = total / repeats
             rows.append({
-                "test": "ingestion",
+                "test": "embedding",
                 "doc_count": count,
-                "backend": backend_name,
-                "latency_s": round(avg_time, 6),
-                "latency_ms": round(avg_time * 1000, 3),
-                "measurement_type": "simulated" if is_sim else "real_hardware",
-                "is_simulated": is_sim,
-                "device": device_info.get("device", "cpu"),
-                "note": "Simulated backend" if is_sim else "Real hardware measurement",
+                "chunk_count": len(texts),
+                "backend": name,
+                "latency_s": round(avg, 6),
+                "latency_ms": round(avg * 1000, 3),
+                "measurement_type": mtype,
+                "is_simulated": mtype == "simulated",
+                "real_inference": info["real_inference"],
+                "note": _note_for(mtype),
             })
-            print(f"  [ingest] docs={count:>3}, {backend_name:<14} -> {avg_time * 1000:>8.1f} ms "
-                  f"({'simulated' if is_sim else 'REAL'})")
+            print(f"  [embed] docs={count:>3}, {name:<14} -> {avg * 1000:>8.1f} ms  [{mtype}]")
 
     return rows
 
 
-def benchmark_real_query(
+# ---------------------------------------------------------------------------
+# Real benchmark: query (transform)
+# ---------------------------------------------------------------------------
+
+def benchmark_query(
     chunk_counts: List[int],
-    backends: Dict[str, Any],
+    backends: Dict[str, Dict[str, Any]],
     repeats: int = 3,
 ) -> List[Dict[str, Any]]:
-    """Benchmark real query using actual backend transform/generate."""
-    rows = []
+    """Benchmark query embedding using actual backend transform."""
     query = "请总结异构计算架构的核心优势。"
+    rows = []
 
     for count in chunk_counts:
-        # Prepare corpus
-        corpus = generate_test_documents(count, size=200)
-        import re
-        all_texts = []
-        for doc in corpus:
-            sentences = re.split(r'[。！？.!?\n]+', doc)
-            all_texts.extend([s.strip() for s in sentences if s.strip()][:3])
+        corpus = chunk_texts(generate_test_documents(5, size=200))[:count]
 
-        for backend_name, backend in backends.items():
-            if backend_name == "SimulatedNPU":
-                continue
+        for name, info in backends.items():
+            backend = info["backend"]
+            mtype = classify_backend(name, info)
 
-            # Fit on corpus first
+            # Fit on corpus
             if hasattr(backend, 'reset_corpus'):
                 backend.reset_corpus()
             if hasattr(backend, 'fit_and_embed'):
-                backend.fit_and_embed(all_texts[:count])
+                backend.fit_and_embed(corpus)
+            elif hasattr(backend, 'embed_texts'):
+                backend.embed_texts(corpus)
 
-            total_time = 0.0
+            # Benchmark query
+            total = 0.0
             for _ in range(repeats):
                 t0 = time.perf_counter()
                 if hasattr(backend, 'transform'):
                     backend.transform([query])
                 elif hasattr(backend, 'embed_texts'):
                     backend.embed_texts([query])
-                total_time += time.perf_counter() - t0
+                total += time.perf_counter() - t0
 
-            avg_time = total_time / repeats
-            is_sim = backend_name == "SimulatedNPU"
-
+            avg = total / repeats
             rows.append({
-                "test": "querying",
+                "test": "query_embedding",
                 "chunk_count": count,
-                "backend": backend_name,
-                "latency_s": round(avg_time, 6),
-                "latency_ms": round(avg_time * 1000, 3),
-                "measurement_type": "simulated" if is_sim else "real_hardware",
-                "is_simulated": is_sim,
-                "note": "Simulated backend" if is_sim else "Real hardware measurement",
+                "backend": name,
+                "latency_s": round(avg, 6),
+                "latency_ms": round(avg * 1000, 3),
+                "measurement_type": mtype,
+                "is_simulated": mtype == "simulated",
+                "real_inference": info["real_inference"],
+                "note": _note_for(mtype),
             })
-            print(f"  [query] chunks={count:>4}, {backend_name:<14} -> {avg_time * 1000:>8.1f} ms "
-                  f"({'simulated' if is_sim else 'REAL'})")
+            print(f"  [query_embed] chunks={count:>4}, {name:<14} -> {avg * 1000:>8.1f} ms  [{mtype}]")
 
     return rows
 
 
 # ---------------------------------------------------------------------------
-# Simulated benchmark (for comparison / CPU-only machines)
+# Real benchmark: generation (generate_answer)
 # ---------------------------------------------------------------------------
 
-_BACKEND_MULTIPLIER = {"CPU": 1.0, "GPU": 0.6, "NPU": 0.3, "SimulatedNPU": 0.45}
-
-
-def benchmark_simulated(
-    doc_counts: List[int],
-    chunk_counts: List[int],
+def benchmark_generation(
+    backends: Dict[str, Dict[str, Any]],
     repeats: int = 3,
 ) -> List[Dict[str, Any]]:
-    """Pure simulated benchmark using time.sleep()."""
+    """Benchmark answer generation using actual backend generate_answer."""
+    query = "什么是异构计算？"
+    context_chunks = [
+        "异构计算是指在同一个计算系统中同时使用不同类型的处理单元。",
+        "CPU 适合复杂控制逻辑，GPU 适合并行计算，NPU 适合推理。",
+        "AMD 锐龙 AI MAX+ 集成了 CPU、GPU 和 NPU 三种计算单元。",
+    ]
+    context_str = "\n".join(context_chunks)
+
+    rows = []
+    for name, info in backends.items():
+        backend = info["backend"]
+        mtype = classify_backend(name, info)
+
+        if not hasattr(backend, 'generate_answer'):
+            continue
+
+        total = 0.0
+        answer = ""
+        for _ in range(repeats):
+            t0 = time.perf_counter()
+            answer = backend.generate_answer(query=query, context=context_str)
+            total += time.perf_counter() - t0
+
+        avg = total / repeats
+        rows.append({
+            "test": "generation",
+            "backend": name,
+            "latency_s": round(avg, 6),
+            "latency_ms": round(avg * 1000, 3),
+            "answer_length": len(answer),
+            "measurement_type": mtype,
+            "is_simulated": mtype == "simulated",
+            "real_inference": info["real_inference"],
+            "note": _note_for(mtype),
+        })
+        print(f"  [generate] {name:<14} -> {avg * 1000:>8.1f} ms  [{mtype}]  answer={len(answer)} chars")
+
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# Real benchmark: end-to-end RAG
+# ---------------------------------------------------------------------------
+
+def benchmark_e2e_rag(
+    doc_counts: List[int],
+    backends: Dict[str, Dict[str, Any]],
+    repeats: int = 3,
+) -> List[Dict[str, Any]]:
+    """Benchmark full RAG pipeline: ingest + query + generate."""
+    query = "什么是异构计算？它的优势是什么？"
     rows = []
 
     for count in doc_counts:
-        docs = generate_test_documents(count)
-        for backend, mult in _BACKEND_MULTIPLIER.items():
-            total = 0.0
-            for _ in range(repeats):
-                t0 = time.perf_counter()
-                for doc in docs:
-                    time.sleep(len(doc) * mult * 1e-5)
-                total += time.perf_counter() - t0
-            avg = total / repeats
-            rows.append({
-                "test": "ingestion",
-                "doc_count": count,
-                "backend": backend,
-                "latency_s": round(avg, 6),
-                "latency_ms": round(avg * 1000, 3),
-                "measurement_type": "simulated",
-                "is_simulated": True,
-                "note": "Simulated via time.sleep multiplier, not real hardware",
-            })
-            print(f"  [ingest] docs={count:>3}, simulated {backend:<14} -> {avg * 1000:>8.1f} ms")
+        for name, info in backends.items():
+            backend = info["backend"]
+            mtype = classify_backend(name, info)
 
-    for count in chunk_counts:
-        for backend, mult in _BACKEND_MULTIPLIER.items():
+            if not hasattr(backend, 'generate_answer'):
+                continue
+
             total = 0.0
             for _ in range(repeats):
+                # Reset
+                if hasattr(backend, 'reset_corpus'):
+                    backend.reset_corpus()
+
                 t0 = time.perf_counter()
-                time.sleep(count * mult * 2e-5)
+
+                # Ingest
+                docs = generate_test_documents(count, size=300)
+                all_chunks = chunk_texts(docs)
+                if hasattr(backend, 'fit_and_embed'):
+                    vectors = backend.fit_and_embed(all_chunks)
+                else:
+                    vectors = backend.embed_texts(all_chunks)
+
+                # Query
+                if hasattr(backend, 'transform'):
+                    qvec = backend.transform([query])
+                else:
+                    qvec = backend.embed_texts([query])
+
+                # Simple retrieval: cosine similarity
+                best_idx = 0
+                best_score = -1
+                for i, vec in enumerate(vectors):
+                    dot = sum(a * b for a, b in zip(qvec[0], vec))
+                    if dot > best_score:
+                        best_score = dot
+                        best_idx = i
+
+                # Generate
+                context = all_chunks[best_idx] if best_idx < len(all_chunks) else ""
+                answer = backend.generate_answer(query=query, context=context)
+
                 total += time.perf_counter() - t0
+
             avg = total / repeats
             rows.append({
-                "test": "querying",
-                "chunk_count": count,
-                "backend": backend,
+                "test": "end_to_end_rag",
+                "doc_count": count,
+                "chunk_count": len(all_chunks),
+                "backend": name,
                 "latency_s": round(avg, 6),
                 "latency_ms": round(avg * 1000, 3),
-                "measurement_type": "simulated",
-                "is_simulated": True,
-                "note": "Simulated via time.sleep multiplier, not real hardware",
+                "measurement_type": mtype,
+                "is_simulated": mtype == "simulated",
+                "real_inference": info["real_inference"],
+                "note": _note_for(mtype),
             })
-            print(f"  [query] chunks={count:>4}, simulated {backend:<14} -> {avg * 1000:>8.1f} ms")
+            print(f"  [e2e_rag] docs={count:>3}, {name:<14} -> {avg * 1000:>8.1f} ms  [{mtype}]")
 
     return rows
 
 
 # ---------------------------------------------------------------------------
-# Resource usage
+# Helpers
 # ---------------------------------------------------------------------------
+
+def _note_for(mtype: str) -> str:
+    return {
+        "real_hardware": "Real hardware measurement",
+        "cpu_fallback_with_hardware_detected": "Hardware EP detected but computation is CPU fallback (not real NPU/GPU inference)",
+        "simulated": "Simulated via time.sleep multiplier, not real hardware",
+        "unavailable": "Backend not available",
+    }.get(mtype, mtype)
+
 
 def collect_resource_usage() -> Dict[str, float]:
     if not HAS_PSUTIL:
         return {"cpu_percent": -1.0, "memory_percent": -1.0, "memory_used_mb": -1.0}
     cpu = psutil.cpu_percent(interval=0.5)
     mem = psutil.virtual_memory()
-    return {
-        "cpu_percent": cpu,
-        "memory_percent": mem.percent,
-        "memory_used_mb": mem.used / (1024 * 1024),
-    }
+    return {"cpu_percent": cpu, "memory_percent": mem.percent, "memory_used_mb": mem.used / (1024 * 1024)}
 
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
 
 def save_csv(rows: List[Dict[str, Any]], filename: str) -> Path:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -335,7 +406,6 @@ def save_csv(rows: List[Dict[str, Any]], filename: str) -> Path:
 
 def main():
     parser = argparse.ArgumentParser(description="Real hardware benchmark with simulated fallback")
-    parser.add_argument("--mode", choices=["auto", "real", "simulated"], default="auto")
     parser.add_argument("--doc-counts", type=int, nargs="+", default=[1, 5, 10, 20])
     parser.add_argument("--chunk-counts", type=int, nargs="+", default=[10, 50, 100])
     parser.add_argument("--repeats", type=int, default=3)
@@ -345,88 +415,75 @@ def main():
     print("  Real Hardware Benchmark")
     print("=" * 60)
 
-    # Detect hardware
     backends = detect_backends()
-    has_real_gpu = "GPU" in backends
-    has_real_npu = "NPU" in backends
-    has_real_hw = has_real_gpu or has_real_npu
 
-    print(f"\n  Detected backends: {list(backends.keys())}")
-    print(f"  Real GPU: {has_real_gpu}")
-    print(f"  Real NPU: {has_real_npu}")
+    print(f"\n  Backends detected:")
+    for name, info in backends.items():
+        avail = "✅" if info["available"] else "❌"
+        real = "real" if info["real_inference"] else "fallback/sim"
+        print(f"    {name:<14} available={avail}  inference={real}")
 
-    # Decide mode
-    if args.mode == "auto":
-        use_real = has_real_hw
-    elif args.mode == "real":
-        if not has_real_hw:
-            print("\n  ❌ --mode=real requested but no real GPU/NPU detected.")
-            print("  Run: python experiments/check_environment.py")
-            sys.exit(1)
-        use_real = True
+    real_backends = {n: i for n, i in backends.items() if i["real_inference"]}
+    has_real = len(real_backends) > 1  # More than just CPU
+
+    if has_real:
+        print(f"\n  ✅ Real hardware backends: {list(real_backends.keys())}")
+        print("  Running real + simulated benchmarks for comparison.")
     else:
-        use_real = False
+        print("\n  ⚠️ No real GPU/NPU inference available.")
+        print("  All results will be SIMULATED or CPU-only.")
 
-    mode_str = "REAL HARDWARE" if use_real else "SIMULATED"
-    print(f"\n  Mode: {mode_str}")
-    print(f"  Doc counts: {args.doc_counts}")
+    print(f"\n  Doc counts: {args.doc_counts}")
     print(f"  Chunk counts: {args.chunk_counts}")
     print(f"  Repeats: {args.repeats}")
     print("=" * 60)
 
-    # Run benchmarks
-    if use_real:
-        print("\n[1/2] Running REAL hardware benchmarks ...")
-        ingest_rows = benchmark_real_ingest(args.doc_counts, backends, args.repeats)
-        query_rows = benchmark_real_query(args.chunk_counts, backends, args.repeats)
-        # Also run simulated for comparison
-        print("\n[2/2] Running simulated benchmarks for comparison ...")
-        sim_rows = benchmark_simulated(args.doc_counts, args.chunk_counts, args.repeats)
-        all_rows = ingest_rows + query_rows + sim_rows
-    else:
-        print("\n[1/1] Running simulated benchmarks ...")
-        all_rows = benchmark_simulated(args.doc_counts, args.chunk_counts, args.repeats)
+    # Run all benchmarks
+    all_rows = []
 
-    # Save results
+    print("\n[1/4] Embedding benchmark ...")
+    all_rows.extend(benchmark_embedding(args.doc_counts, backends, args.repeats))
+
+    print("\n[2/4] Query embedding benchmark ...")
+    all_rows.extend(benchmark_query(args.chunk_counts, backends, args.repeats))
+
+    print("\n[3/4] Generation benchmark ...")
+    all_rows.extend(benchmark_generation(backends, args.repeats))
+
+    print("\n[4/4] End-to-end RAG benchmark ...")
+    all_rows.extend(benchmark_e2e_rag(args.doc_counts, backends, args.repeats))
+
+    # Save
     print("\n[save] Writing CSV ...")
     save_csv(all_rows, "latency_results.csv")
 
     # Backend summary
     summary = []
-    for backend in set(r["backend"] for r in all_rows):
-        subset = [r for r in all_rows if r["backend"] == backend]
-        real_rows = [r for r in subset if not r.get("is_simulated", True)]
-        sim_rows = [r for r in subset if r.get("is_simulated", True)]
-
-        if real_rows:
-            avg_real = sum(r["latency_ms"] for r in real_rows) / len(real_rows)
-            summary.append({
-                "backend": backend,
-                "avg_latency_ms": round(avg_real, 3),
-                "test_count": len(real_rows),
-                "measurement_type": "real_hardware",
-                "is_simulated": False,
-                "note": "Real hardware measurement",
-            })
-        if sim_rows:
-            avg_sim = sum(r["latency_ms"] for r in sim_rows) / len(sim_rows)
-            summary.append({
-                "backend": backend,
-                "avg_latency_ms": round(avg_sim, 3),
-                "test_count": len(sim_rows),
-                "measurement_type": "simulated",
-                "is_simulated": True,
-                "note": "Simulated via time.sleep multiplier",
-            })
-
+    for name in set(r["backend"] for r in all_rows):
+        subset = [r for r in all_rows if r["backend"] == name]
+        mtype = subset[0]["measurement_type"]
+        avg = sum(r["latency_ms"] for r in subset) / len(subset)
+        summary.append({
+            "backend": name,
+            "avg_latency_ms": round(avg, 3),
+            "test_count": len(subset),
+            "measurement_type": mtype,
+            "is_simulated": mtype == "simulated",
+            "real_inference": subset[0].get("real_inference", False),
+            "note": _note_for(mtype),
+        })
     save_csv(summary, "backend_results.csv")
     save_csv([collect_resource_usage()], "resource_usage.csv")
 
+    # Print warnings
     print("\n" + "=" * 60)
-    print(f"  Benchmark complete! Mode: {mode_str}")
-    if not use_real:
-        print("  ⚠️ All results are SIMULATED. Not real AMD hardware data.")
-        print("  To get real data, run on AMD Ryzen AI MAX+ hardware.")
+    if not has_real:
+        print("  ⚠️ All results are SIMULATED or CPU-only.")
+        print("  To get real GPU/NPU data, run on AMD hardware.")
+    for name, info in backends.items():
+        if info["available"] and not info["real_inference"]:
+            print(f"  ⚠️ {name}: EP detected but inference is CPU fallback.")
+            print(f"     CSV marked as 'cpu_fallback_with_hardware_detected', NOT 'real_hardware'.")
     print("=" * 60)
 
 

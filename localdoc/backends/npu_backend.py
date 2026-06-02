@@ -144,6 +144,18 @@ class AMDNPUBackend:
         self._lazy_init()
         return self._npu_available
 
+    def has_real_inference(self) -> bool:
+        """
+        检查 NPU 后端是否真正执行 NPU 推理（而非 CPU 回退）。
+
+        当前实现：核心计算为 NumPy 归一化，未创建 ONNX Runtime session。
+        因此始终返回 False。后续实现真正的 ONNX 模型推理后应返回 True。
+
+        Returns:
+            始终返回 False（当前为 CPU 回退实现）
+        """
+        return False
+
     # ---------- 设备信息 ----------
 
     def get_device_info(self) -> Dict[str, Any]:

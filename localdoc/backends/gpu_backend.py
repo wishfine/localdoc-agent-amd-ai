@@ -131,6 +131,15 @@ class AMDGPUBackend:
         self._lazy_init()
         return self._hip_available and self._device is not None
 
+    def has_real_inference(self) -> bool:
+        """
+        检查 GPU 后端是否真正执行 GPU 推理。
+
+        Returns:
+            True 当且仅当 ROCm HIP 可用且 GPU 设备可用
+        """
+        return self.is_available()
+
     # ---------- 设备信息 ----------
 
     def get_device_info(self) -> Dict[str, Any]:
