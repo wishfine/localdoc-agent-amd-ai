@@ -2,9 +2,15 @@
 # Optional: Local LLM dependencies for Qwen3-1.7B inference.
 # Only installed via: bash scripts/setup_llm.sh
 # NOT included in the default lightweight requirements.txt
+#
+# Important:
+# Do NOT put torch here. On Linux, plain "pip install torch" can resolve to a
+# CUDA wheel, which is wrong for an AMD ROCm experiment. Install torch with an
+# explicit platform selector instead:
+#   AMD ROCm: bash scripts/setup_llm.sh --rocm
+#   CPU only: bash scripts/setup_llm.sh --cpu
 
 -r requirements.txt
-torch>=2.2
 transformers>=4.51.0
 accelerate>=0.26.0
 safetensors>=0.4.2

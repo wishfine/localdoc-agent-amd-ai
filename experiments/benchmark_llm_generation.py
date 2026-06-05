@@ -74,7 +74,8 @@ def main():
     if not check_model_exists(model_dir) and not args.allow_hub:
         print(f"\n❌ 模型未找到: {model_dir}")
         print("\n请先运行:")
-        print("  bash scripts/setup_llm.sh")
+        print("  bash scripts/setup_llm.sh --rocm   # AMD ROCm 平台")
+        print("  # 或: bash scripts/setup_llm.sh --cpu")
         print("  bash scripts/download_llm.sh")
         print("\n或显式允许从 Hugging Face Hub 加载:")
         print("  python experiments/benchmark_llm_generation.py --allow-hub")

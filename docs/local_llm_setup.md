@@ -7,7 +7,7 @@
 | 模型 | Qwen3-1.7B（1.7B 参数） |
 | 语言支持 | 中文、英文 |
 | 许可证 | Apache-2.0（Hugging Face） |
-| 依赖 | transformers>=4.51.0 + torch，不需要 vLLM/Ollama |
+| 依赖 | transformers>=4.51.0 + 显式选择的 PyTorch（ROCm 或 CPU），不需要 vLLM/Ollama |
 | 用途 | 课程展示本地 LLM 推理能力 |
 | 特殊设置 | 关闭 thinking mode（enable_thinking=False） |
 
@@ -18,16 +18,48 @@
 - 如果没有真实 AMD GPU/NPU 硬件，模型在 **CPU 上推理**，不代表 GPU/NPU 实测。
 - 该实验只证明"本地 LLM 生成链路可运行"，不声称 AMD GPU/NPU 加速。
 - Qwen3 默认开启 thinking mode，本项目关闭它（enable_thinking=False）以保证演示稳定。
+- `requirements-llm.txt` 不包含 `torch`。AMD 平台不能直接 `pip install torch`，否则可能安装成 CUDA 版 PyTorch。
 
 ## 安装步骤
 
 ### 1. 安装依赖
 
+AMD ROCm 平台：
+
 ```bash
-bash scripts/setup_llm.sh
+bash scripts/setup_llm.sh --rocm
 ```
 
-这会安装 `requirements-llm.txt` 中的依赖（torch, transformers>=4.51.0, accelerate 等）。
+普通 CPU 环境：
+
+```bash
+bash scripts/setup_llm.sh --cpu
+```
+
+默认不传参数时，`setup_llm.sh` 只安装通用 LLM 依赖，不安装 PyTorch。这样可以避免在 AMD 平台误装 CUDA 版 PyTorch。
+
+如果已经误装 CUDA 版 PyTorch，运行：
+
+```bash
+bash scripts/setup_llm.sh --rocm
+```
+
+脚本会先卸载现有 `torch/torchvision/torchaudio`，并清理 `nvidia-*` CUDA wheel 残留依赖，再安装 ROCm 版 PyTorch。
+
+安装后验证：
+
+```bash
+python - <<'PY'
+import torch
+print("torch:", torch.__version__)
+print("hip:", torch.version.hip)
+print("cuda:", torch.version.cuda)
+print("cuda_available:", torch.cuda.is_available())
+print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
+PY
+```
+
+AMD ROCm 正确结果：`torch.version.hip` 非空，且 `torch.cuda.is_available()` 为 `True`。如果 `torch.version.cuda` 非空但 `torch.version.hip` 为空，就是 CUDA 版 PyTorch，不能作为 AMD ROCm 实测。
 
 ### 2. 下载模型
 

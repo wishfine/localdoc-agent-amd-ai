@@ -100,9 +100,10 @@ class AMDGPUBackend:
         else:
             logger.warning(
                 "AMD GPU 后端：当前 PyTorch 未编译 HIP 后端（torch.version.hip 为空）。"
-                "如需 AMD GPU 加速，请安装 ROCm 版本的 PyTorch：\n"
-                "  pip install torch --index-url https://download.pytorch.org/whl/rocm6.0\n"
-                "或者确认系统已正确安装 ROCm 运行时。"
+                "如需 AMD GPU 加速，请安装 ROCm 版本的 PyTorch。"
+                "不要直接运行 pip install torch；在 Linux 上这可能安装 CUDA 版 PyTorch。"
+                "本项目推荐执行：bash scripts/setup_llm.sh --rocm，"
+                "或按 README 中的 ROCm 安装说明选择匹配当前 ROCm 版本的 wheel。"
             )
             return
 

@@ -19,6 +19,8 @@
 > **本项目不伪造 AMD GPU/NPU 硬件实验结果。**
 >
 > 已在 AMD/Jupyter 环境中检测到 ROCm 命令行工具和 `gfx1151` 架构，但当前运行记录显示 Python 环境尚未安装 ROCm 版 PyTorch，因此 ROCm GPU benchmark 仍未激活。此时基础实验只有 CPU baseline，Agent 的 SimulatedNPU 结果仍是 CPU 计算 + 人为延迟，不代表真实 AMD NPU/GPU 性能。
+>
+> **依赖修正说明**：旧版 `requirements-llm.txt` 曾直接写入 `torch>=2.2`。在 Linux 上执行普通 `pip install torch` / `pip install -r requirements-llm.txt` 可能安装成 CUDA 版 PyTorch，这不适用于 AMD ROCm 实测。当前已把 `torch` 从通用依赖中移除，并改为通过 `bash scripts/setup_llm.sh --rocm` 或 `--cpu` 显式选择平台。
 
 ---
 
@@ -31,7 +33,7 @@
 | 操作系统/内核 | Linux `6.14.0-1018-oem`，32 CPU 线程，约 64 GB 内存 |
 | ROCm 命令行工具 | `rocminfo`、`rocm-smi`、`hipcc`、`hipconfig` 均可执行 |
 | GPU 架构证据 | `gfx11`、`gfx1151` |
-| PyTorch-HIP | 未安装：`torch 已安装: False` |
+| PyTorch-HIP | 初始记录为未安装：`torch 已安装: False`；如果按旧依赖安装过，可能变成 CUDA 版 PyTorch，需要按下文清理重装 |
 | ROCm GPU benchmark | 未激活：`ROCm GPU available: False` |
 | 当前可作为报告证据的数据 | ROCm 环境证据、CPU baseline、完整端到端流程、模拟后端标注、能耗/资源采样 |
 | 当前不能声称的数据 | 不能声称已经获得 ROCm GPU / Ryzen AI NPU 真实加速比 |
@@ -49,6 +51,14 @@ PY
 ```
 
 只有当 `torch.version.hip` 非空且 `torch.cuda.is_available()` 为 `True` 时，`experiments/basic_benchmarks.py` 才会自动写入 `ROCm_GPU,measurement_type=real_rocm_gpu` 的真实 GPU 数据。
+
+判断结果时按下面规则：
+
+| `torch.version.hip` | `torch.version.cuda` | 含义 |
+|---------------------|----------------------|------|
+| 非空 | 通常为空 | ROCm 版 PyTorch，可用于 AMD GPU 实测 |
+| 空 | 非空 | CUDA 版 PyTorch，装错了，不能作为 AMD ROCm 结果 |
+| 空 | 空 | CPU 版或未启用 GPU，只能做 CPU baseline |
 
 ---
 
@@ -147,6 +157,56 @@ git pull
 rm -rf .venv
 bash run_all_experiments.sh --quick
 ```
+
+### AMD ROCm 平台依赖安装说明
+
+基础实验和默认 Demo 不需要安装 PyTorch；它们可以直接运行。如果要启用 ROCm GPU 实测或本地 LLM，必须显式安装 ROCm 版 PyTorch。
+
+不要使用这些命令安装 AMD 平台依赖：
+
+```bash
+pip install torch
+pip install "torch>=2.2"
+pip install -r requirements-llm.txt  # 旧版文件曾包含 torch；当前已修正为不含 torch
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+```
+
+AMD ROCm 平台应使用：
+
+```bash
+# 默认使用 PyTorch ROCm 6.4 wheel 索引
+bash scripts/setup_llm.sh --rocm
+```
+
+如果你的 ROCm 版本不是 6.4，需要改用匹配版本的索引，例如：
+
+```bash
+LOCALDOC_TORCH_ROCM_INDEX_URL=https://download.pytorch.org/whl/rocm6.3 \
+  bash scripts/setup_llm.sh --rocm
+```
+
+如果已经按旧命令装成 CUDA 版 PyTorch，直接运行下面命令修正。脚本会卸载 `torch/torchvision/torchaudio`，并清理 `nvidia-*` CUDA wheel 残留依赖：
+
+```bash
+bash scripts/setup_llm.sh --rocm
+```
+
+安装后必须验证：
+
+```bash
+python - <<'PY'
+import torch
+print("torch:", torch.__version__)
+print("hip:", torch.version.hip)
+print("cuda:", torch.version.cuda)
+print("cuda_available:", torch.cuda.is_available())
+print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
+PY
+```
+
+正确的 AMD ROCm 结果应满足：`torch.version.hip` 非空，且 `torch.cuda.is_available()` 为 `True`。如果 `torch.version.cuda` 非空但 `torch.version.hip` 为空，就是 CUDA 版 PyTorch，不能写成 AMD ROCm 实测。
+
+参考官方说明时，应在 PyTorch 安装选择器中选择 `Linux + Pip + Python + ROCm`，不要选择 CUDA；AMD 官方文档也强调需选择与 Python/Ubuntu/ROCm 版本兼容的 ROCm wheel。参考链接：[PyTorch Get Started](https://pytorch.org/get-started/locally/)、[AMD ROCm PyTorch 安装文档](https://rocm.docs.amd.com/projects/radeon-ryzen/en/docs-6.4.4/docs/install/installrad/native_linux/install-pytorch.html)。
 
 ---
 
@@ -291,7 +351,7 @@ localdoc-agent-amd-ai/
 │   ├── bootstrap_python_env.sh          # 无 sudo Jupyter 环境 Python 初始化
 │   ├── download_llm.py                  # 下载/选择本地 LLM
 │   ├── download_llm.sh                  # LLM 下载入口
-│   ├── setup_llm.sh                     # LLM 依赖安装
+│   ├── setup_llm.sh                     # LLM 依赖安装；显式选择 --rocm/--cpu
 │   ├── run_demo_llm.sh                  # 启用本地 LLM 的 Demo
 │   └── run_llm_benchmark.sh             # 本地 LLM benchmark
 │
@@ -331,7 +391,7 @@ localdoc-agent-amd-ai/
 
 ## 当前限制说明
 
-1. **AMD 平台已检测到 ROCm 工具，但 PyTorch-HIP 未安装**：最新 AMD/Jupyter 运行记录中 `rocminfo`、`rocm-smi`、`hipcc`、`hipconfig` 可用，且检测到 `gfx1151`；但 `torch 已安装: False`，所以 ROCm GPU benchmark 尚未激活。
+1. **AMD 平台已检测到 ROCm 工具，但 PyTorch-HIP 需要单独安装**：最新 AMD/Jupyter 运行记录中 `rocminfo`、`rocm-smi`、`hipcc`、`hipconfig` 可用，且检测到 `gfx1151`；初始记录里 `torch 已安装: False`。如果后续按旧依赖装成 CUDA 版 PyTorch，也仍然不能激活 ROCm GPU benchmark，必须重装 ROCm 版 PyTorch。
 
 2. **NPU 后端仍是检测/接口层**：当前 `AMDNPUBackend` 能检测 ONNX Runtime EP，但没有真实 ONNX NPU 推理模型；即使检测到 EP，也会在 benchmark 中标记为 `cpu_fallback_with_hardware_detected`，不会标为 `real_hardware`。
 
@@ -363,7 +423,15 @@ bash run_all_experiments.sh --quick
 
 ### 第二步：安装 ROCm 版 PyTorch
 
-根据 [PyTorch 官方安装页](https://pytorch.org/get-started/locally/) 或 [AMD ROCm PyTorch 安装文档](https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/native_linux/install-pytorch.html) 选择与当前 ROCm 版本匹配的安装命令。安装后必须验证：
+先不要直接 `pip install torch`。本项目的安全入口是：
+
+```bash
+bash scripts/setup_llm.sh --rocm
+```
+
+该脚本会使用 ROCm PyTorch wheel 索引，并在安装前卸载可能误装的 CUDA 版 torch。默认索引为 `https://download.pytorch.org/whl/rocm6.4`；如 AMD/Jupyter 环境的 ROCm 版本不同，用 `LOCALDOC_TORCH_ROCM_INDEX_URL` 指定匹配版本。
+
+也可以根据 [PyTorch 官方安装页](https://pytorch.org/get-started/locally/) 或 [AMD ROCm PyTorch 安装文档](https://rocm.docs.amd.com/projects/radeon-ryzen/en/docs-6.4.4/docs/install/installrad/native_linux/install-pytorch.html) 选择与当前 ROCm、Python、Ubuntu 版本匹配的安装命令。安装后必须验证：
 
 ```bash
 source .venv/bin/activate
@@ -371,6 +439,7 @@ python - <<'PY'
 import torch
 print("torch:", torch.__version__)
 print("hip:", torch.version.hip)
+print("cuda:", torch.version.cuda)
 print("cuda_available:", torch.cuda.is_available())
 print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
 PY
@@ -388,6 +457,7 @@ bash run_all_experiments.sh
 
 - `results/environment_report.txt` 中 `torch.version.hip` 非空。
 - `torch.cuda.is_available()` 为 `True`。
+- `torch.version.cuda` 不应作为 AMD 证据；如果 `torch.version.cuda` 非空但 `torch.version.hip` 为空，说明装成 CUDA 版。
 - `results/matmul_benchmark.csv`、`results/precision_compare.csv`、`results/mlp_train_log.csv` 出现 `ROCm_GPU` 且 `measurement_type=real_rocm_gpu`。
 - `figures/matmul_benchmark.png`、`figures/precision_compare.png`、`figures/mlp_training_curve.png` 中出现 ROCm GPU 曲线或柱状对比。
 
@@ -420,8 +490,12 @@ bash run_all_experiments.sh
 ### 启用步骤
 
 ```bash
-# 1. 安装 LLM 依赖（torch, transformers 等）
-bash scripts/setup_llm.sh
+# 1. 安装 LLM 依赖
+# AMD ROCm 平台：
+bash scripts/setup_llm.sh --rocm
+
+# 普通 CPU 环境：
+# bash scripts/setup_llm.sh --cpu
 
 # 2. 下载模型（约 1GB，从 Hugging Face）
 bash scripts/download_llm.sh
@@ -439,6 +513,8 @@ bash scripts/run_llm_benchmark.sh
 ### 说明
 
 - 本项目使用 **Qwen3-1.7B** 作为可选本地 LLM 后端。
+- `requirements-llm.txt` 不再包含 `torch`，避免在 AMD 平台误装 CUDA 版 PyTorch。
+- AMD 平台必须用 `bash scripts/setup_llm.sh --rocm` 安装 ROCm 版 PyTorch；普通 `pip install torch` 不可作为 AMD 实测依赖安装方式。
 - 默认不加载 LLM，设置 `LOCALDOC_USE_LLM=1` 才启用。
 - Qwen3-1.7B 用于展示本地生成式 AI 推理能力。
 - 关闭 thinking mode（`enable_thinking=False`）以保证演示稳定快速。
