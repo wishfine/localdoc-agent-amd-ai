@@ -52,21 +52,26 @@
     - 文件：`results/vertical_demo_transcript.csv`
     - 截图内容：企业内网政策问答的问题、答案、来源、top_score、`ingest_backend_trace`、`query_backend_trace`、`privacy_note`。
 
+11. [必截] 本地 LLM 生成 benchmark
+    - 文件：`results/llm_generation_benchmark.csv`、`figures/llm_generation_latency.png`
+    - 截图内容：模型名称、device、`torch_hip_version`、generation latency、tokens/s。
+    - 如果 device 是 `cuda` 且 `torch_hip_version` 非空，可说明本地 LLM 通过 ROCm PyTorch 在 AMD GPU 上运行；仍需注明这是本地 LLM 推理，不是严格的 NPU benchmark。
+
+12. [必截] RAG 模式对比
+    - 文件：`results/rag_mode_comparison.csv`、`results/rag_stage_breakdown.csv`、`figures/rag_mode_comparison.png`、`figures/rag_stage_breakdown.png`
+    - 截图内容：extractive RAG 与 local LLM RAG 的总耗时、ingest/query 阶段耗时、device 和说明字段。
+
 ## 二、建议补截
 
-11. [建议] Gradio Web UI 演示页
+13. [建议] Gradio Web UI 演示页
     - 命令：`bash run_demo.sh`
     - 截图内容：上传文档、构建知识库、输入问题、返回答案、调度日志。
 
-12. [建议] 项目文件结构
+14. [建议] 项目文件结构
     - 截图内容：`localdoc/`、`experiments/`、`examples/enterprise_policy/`、`results/`、`figures/`。
     - 用于说明代码完整性和实验产物组织。
 
-13. [建议] 本地 LLM benchmark
-    - 文件：`results/llm_generation_benchmark.csv`
-    - 截图内容：如果本地模型未下载，截 skipped 记录；如果已下载，截模型路径、device、latency、tokens/s。
-
-14. [建议] 单元测试结果
+15. [建议] 单元测试结果
     - 命令：`python -m pytest -q`
     - 截图内容：`48 passed` 或当前实际通过数量。
 
@@ -75,5 +80,6 @@
 1. 环境与硬件证据：环境报告、ROCm 原始证据。
 2. 基础异构实验：matmul、FP32/FP16、MLP。
 3. 应用实验：Agent latency、backend comparison、vertical transcript。
-4. 性能与能效：resource usage、energy summary。
-5. 诚信说明：`measurement_type`、`is_simulated`、`real_inference` 字段截图。
+4. 本地 LLM：LLM generation、RAG mode comparison、stage breakdown。
+5. 性能与能效：resource usage、energy summary。
+6. 诚信说明：`measurement_type`、`is_simulated`、`real_inference` 字段截图。

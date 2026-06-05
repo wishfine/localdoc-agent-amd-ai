@@ -304,7 +304,10 @@ bash run_all_experiments.sh --quick
 # 3. AMD ROCm 平台可选：安装 ROCm 版 PyTorch，避免 CUDA 版误装
 bash scripts/setup_llm.sh --rocm
 
-# 4. 验证是否真的是 ROCm PyTorch
+# 4. 下载本地 LLM 模型。模型目录 models/ 被 .gitignore 忽略，不会推送到仓库。
+bash scripts/download_llm.sh
+
+# 5. 验证是否真的是 ROCm PyTorch
 python - <<'PY'
 import torch
 print("torch:", torch.__version__)
@@ -314,14 +317,48 @@ print("cuda_available:", torch.cuda.is_available())
 print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
 PY
 
-# 5. 正式刷新全部实验数据
-bash run_all_experiments.sh
+# 6. 正式刷新全部实验数据，包含本地 LLM generation 和 RAG mode benchmark
+bash run_all_experiments.sh --allow-llm-hub
 
-# 6. 启动交互式演示，截图 Gradio 页面和问答流程
+# 7. 启动交互式演示，截图 Gradio 页面和问答流程
 bash run_demo.sh
 ```
 
-如果第 4 步显示 `torch.version.hip` 为空，则不能写 ROCm GPU 实测；此时只能把结果描述为 AMD 平台环境检测 + CPU baseline + simulated backend。
+如果第 5 步显示 `torch.version.hip` 为空，则不能写 ROCm GPU 实测；此时只能把结果描述为 AMD 平台环境检测 + CPU baseline + simulated backend。
+
+AMD 平台使用时间有限时，可以直接复制下面这组命令一次性运行。运行完成后，截图 `docs/screenshot_checklist.md` 中的必截项，再推送结果。
+
+```bash
+cd ~/localdoc-agent-amd-ai
+git pull
+rm -rf .venv
+bash scripts/setup_llm.sh --rocm
+bash scripts/download_llm.sh
+bash run_all_experiments.sh --allow-llm-hub
+```
+
+实验结果推送到远程仓库：
+
+```bash
+git status --short
+git add README.md docs/screenshot_checklist.md .gitignore \
+  results/environment_report.txt \
+  results/rocminfo.txt results/rocm_smi.txt results/hipcc_version.txt results/hipconfig_full.txt \
+  results/matmul_benchmark.csv results/precision_compare.csv results/mlp_train_log.csv \
+  results/latency_results.csv results/backend_results.csv results/resource_usage.csv \
+  results/power_trace.csv results/energy_summary.csv \
+  results/vertical_demo_transcript.csv results/llm_generation_benchmark.csv \
+  results/rag_mode_comparison.csv results/rag_stage_breakdown.csv \
+  results/full_experiment_run.log results/experiment_manifest.txt \
+  figures/matmul_benchmark.png figures/precision_compare.png figures/mlp_training_curve.png \
+  figures/energy_comparison.png figures/latency_comparison.png figures/backend_comparison.png \
+  figures/resource_usage.png figures/llm_generation_latency.png \
+  figures/rag_mode_comparison.png figures/rag_stage_breakdown.png
+git commit -m "Add AMD full experiment results"
+git push origin main
+```
+
+不要提交 `models/`，模型文件很大，已经被 `.gitignore` 忽略。
 
 ### 单项程序命令总览
 

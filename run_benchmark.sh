@@ -238,6 +238,12 @@ if [ "$RUN_LLM" -eq 1 ]; then
     else
         warn "本地 LLM benchmark 失败或模型未准备好，继续执行。"
     fi
+
+    if python "$SCRIPT_DIR/experiments/benchmark_rag_modes.py"; then
+        info "RAG 模式对比 benchmark 完成。"
+    else
+        warn "RAG 模式对比失败或模型未准备好，继续执行。"
+    fi
 else
     warn "默认跳过 LLM benchmark；如需运行请传 --with-llm"
 fi
@@ -268,6 +274,14 @@ else
     warn "图表生成部分失败，但 CSV 结果已保存。"
 fi
 
+if [ "$RUN_LLM" -eq 1 ]; then
+    if python "$SCRIPT_DIR/experiments/plot_llm_results.py"; then
+        info "LLM/RAG 图表生成完成。"
+    else
+        warn "LLM/RAG 图表生成部分失败，但 CSV 结果已保存。"
+    fi
+fi
+
 # ====== 总结 ======
 END_TIME=$(date +%s)
 TOTAL_DURATION=$((END_TIME - START_TIME))
@@ -286,7 +300,7 @@ if [ -f "$SCRIPT_DIR/results/environment_report.txt" ]; then
     echo "  📋 results/environment_report.txt"
 fi
 
-for csv in matmul_benchmark.csv precision_compare.csv mlp_train_log.csv latency_results.csv backend_results.csv resource_usage.csv power_trace.csv energy_summary.csv vertical_demo_transcript.csv llm_generation_benchmark.csv; do
+for csv in matmul_benchmark.csv precision_compare.csv mlp_train_log.csv latency_results.csv backend_results.csv resource_usage.csv power_trace.csv energy_summary.csv vertical_demo_transcript.csv llm_generation_benchmark.csv rag_mode_comparison.csv rag_stage_breakdown.csv; do
     if [ -f "$SCRIPT_DIR/results/$csv" ]; then
         LINES=$(wc -l < "$SCRIPT_DIR/results/$csv")
         echo "  📊 results/$csv  ($LINES 行)"
@@ -294,7 +308,7 @@ for csv in matmul_benchmark.csv precision_compare.csv mlp_train_log.csv latency_
 done
 
 echo ""
-for img in matmul_benchmark.png precision_compare.png mlp_training_curve.png energy_comparison.png latency_comparison.png backend_comparison.png resource_usage.png; do
+for img in matmul_benchmark.png precision_compare.png mlp_training_curve.png energy_comparison.png latency_comparison.png backend_comparison.png resource_usage.png llm_generation_latency.png rag_mode_comparison.png rag_stage_breakdown.png; do
     if [ -f "$SCRIPT_DIR/figures/$img" ]; then
         SIZE=$(du -h "$SCRIPT_DIR/figures/$img" | cut -f1)
         echo "  📈 figures/$img  ($SIZE)"

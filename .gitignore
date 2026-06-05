@@ -141,6 +141,8 @@ results/*.csv
 results/.resource_monitor_stop
 results/full_experiment_run.log
 results/experiment_manifest.txt
+!results/full_experiment_run.log
+!results/experiment_manifest.txt
 !results/matmul_benchmark.csv
 !results/precision_compare.csv
 !results/mlp_train_log.csv
@@ -151,6 +153,8 @@ results/experiment_manifest.txt
 !results/energy_summary.csv
 !results/vertical_demo_transcript.csv
 !results/llm_generation_benchmark.csv
+!results/rag_mode_comparison.csv
+!results/rag_stage_breakdown.csv
 !results/rocminfo.txt
 !results/rocm_smi.txt
 !results/hipcc_version.txt
@@ -163,6 +167,9 @@ figures/*.png
 !figures/latency_comparison.png
 !figures/backend_comparison.png
 !figures/resource_usage.png
+!figures/llm_generation_latency.png
+!figures/rag_mode_comparison.png
+!figures/rag_stage_breakdown.png
 *.db
 *.sqlite
 

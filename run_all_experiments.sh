@@ -145,13 +145,19 @@ MANIFEST="$SCRIPT_DIR/results/experiment_manifest.txt"
         results/energy_summary.csv \
         results/vertical_demo_transcript.csv \
         results/llm_generation_benchmark.csv \
+        results/rag_mode_comparison.csv \
+        results/rag_stage_breakdown.csv \
+        results/full_experiment_run.log \
         figures/matmul_benchmark.png \
         figures/precision_compare.png \
         figures/mlp_training_curve.png \
         figures/energy_comparison.png \
         figures/latency_comparison.png \
         figures/backend_comparison.png \
-        figures/resource_usage.png
+        figures/resource_usage.png \
+        figures/llm_generation_latency.png \
+        figures/rag_mode_comparison.png \
+        figures/rag_stage_breakdown.png
     do
         if [ -f "$SCRIPT_DIR/$path" ]; then
             printf "OK  %s\n" "$path"
