@@ -33,6 +33,7 @@ import random
 from collections import Counter
 from typing import List, Dict, Any
 
+from localdoc.backends.cpu_backend import CPUBackend
 from localdoc.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -46,14 +47,10 @@ _SIMULATED_JITTER_MAX = 0.003              # 随机抖动上限 3ms
 
 # 警告信息 —— 每次实例化时打印
 _SIMULATION_WARNING = (
-    "\n"
-    "=" * 72 + "\n"
-    "  [警告] 当前使用的是 SimulatedNPUBackend（模拟 NPU 后端）\n"
-    "  所有计算仍在 CPU 上执行，人为延迟仅用于模拟 NPU 推理耗时。\n"
-    "  此后端的性能数据不代表真实 AMD NPU 的性能。\n"
-    "  如需真实 NPU 性能，请使用 AMDNPUBackend + 真实硬件。\n"
-    "=" * 72
+    "[警告] SimulatedNPUBackend: CPU execution with artificial delay; "
+    "not real AMD NPU hardware."
 )
+_SIMULATION_WARNING_PRINTED = False
 
 
 class SimulatedNPUBackend:
@@ -72,7 +69,11 @@ class SimulatedNPUBackend:
 
     def __init__(self) -> None:
         """初始化模拟 NPU 后端，打印醒目警告。"""
-        print(_SIMULATION_WARNING)
+        global _SIMULATION_WARNING_PRINTED
+        self._cpu_backend = CPUBackend()
+        if not _SIMULATION_WARNING_PRINTED:
+            print(_SIMULATION_WARNING)
+            _SIMULATION_WARNING_PRINTED = True
         logger.warning(
             "SimulatedNPUBackend 已初始化。"
             "这是一个模拟后端，所有计算在 CPU 上执行。"
@@ -99,6 +100,41 @@ class SimulatedNPUBackend:
         """
         return True
 
+    def reset_corpus(self) -> None:
+        """Reset fitted TF-IDF state before rebuilding the document index."""
+        self._cpu_backend.reset_corpus()
+
+    def _sleep_embedding_delay(self, num_texts: int) -> None:
+        """Add simulated embedding latency after real CPU computation."""
+        delay = _SIMULATED_EMBED_DELAY_PER_TEXT * num_texts
+        jitter = random.uniform(0, _SIMULATED_JITTER_MAX)
+        total_delay = delay + jitter
+        logger.info(
+            "[模拟 NPU] 添加 %.4f 秒模拟延迟（基础 %.4f + 抖动 %.4f）",
+            total_delay, delay, jitter,
+        )
+        time.sleep(total_delay)
+
+    def fit_and_embed(self, texts: List[str]) -> List[List[float]]:
+        """Fit a frozen CPU TF-IDF vocabulary, then add simulated NPU latency."""
+        logger.warning(
+            "[模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = %d",
+            len(texts),
+        )
+        vectors = self._cpu_backend.fit_and_embed(texts)
+        self._sleep_embedding_delay(len(texts))
+        return vectors
+
+    def transform(self, texts: List[str]) -> List[List[float]]:
+        """Embed queries with the frozen vocabulary, then add simulated latency."""
+        logger.warning(
+            "[模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = %d",
+            len(texts),
+        )
+        vectors = self._cpu_backend.transform(texts)
+        self._sleep_embedding_delay(len(texts))
+        return vectors
+
     # ---------- 文本嵌入 ----------
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
@@ -120,57 +156,13 @@ class SimulatedNPUBackend:
         if not texts:
             return []
 
-        # 打印警告：模拟模式
         logger.warning(
             "[模拟 NPU] embed_texts 被调用，实际在 CPU 上执行。"
             "文本数 = %d",
             len(texts),
         )
-
-        # ---------- 实际 CPU 计算 ----------
-        tokenized_docs = [self._tokenize(t) for t in texts]
-        vocab_set: set = set()
-        for tokens in tokenized_docs:
-            vocab_set.update(tokens)
-        feature_names: List[str] = sorted(vocab_set)
-        vocab_index = {w: i for i, w in enumerate(feature_names)}
-        vocab_size = len(feature_names)
-        n_docs = len(texts)
-
-        doc_freq: Counter = Counter()
-        for tokens in tokenized_docs:
-            for t in set(tokens):
-                doc_freq[t] += 1
-        idf_values = [0.0] * vocab_size
-        for word, idx in vocab_index.items():
-            idf_values[idx] = math.log((n_docs + 1) / (1 + doc_freq[word])) + 1.0
-
-        vectors: List[List[float]] = []
-        for tokens in tokenized_docs:
-            tf = Counter(tokens)
-            total = len(tokens) if tokens else 1
-            vec = [0.0] * vocab_size
-            for word, count in tf.items():
-                if word in vocab_index:
-                    i = vocab_index[word]
-                    vec[i] = (count / total) * idf_values[i]
-            # L2 归一化
-            norm = math.sqrt(sum(v * v for v in vec))
-            if norm > 0:
-                vec = [v / norm for v in vec]
-            vectors.append(vec)
-
-        # ---------- 添加模拟延迟 ----------
-        delay = _SIMULATED_EMBED_DELAY_PER_TEXT * len(texts)
-        jitter = random.uniform(0, _SIMULATED_JITTER_MAX)
-        total_delay = delay + jitter
-        logger.info(
-            "[模拟 NPU] 添加 %.4f 秒模拟延迟（基础 %.4f + 抖动 %.4f）",
-            total_delay, delay, jitter,
-        )
-        time.sleep(total_delay)
-
-        logger.info("[模拟 NPU] 嵌入完成（CPU 实际计算 + 模拟延迟）")
+        vectors = self._cpu_backend.embed_texts(texts)
+        self._sleep_embedding_delay(len(texts))
         return vectors
 
     # ---------- 问答生成 ----------
@@ -236,7 +228,7 @@ class SimulatedNPUBackend:
                 best_score = score
                 best_sentence = sentence
 
-        answer = best_sentence[:max_length] if best_sentence else context[0][:max_length]
+        answer = best_sentence[:max_length] if best_sentence else context_list[0][:max_length]
 
         # ---------- 添加模拟延迟 ----------
         jitter = random.uniform(0, _SIMULATED_JITTER_MAX)

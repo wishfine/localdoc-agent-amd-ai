@@ -1,0 +1,3 @@
+backend,avg_latency_ms,test_count,measurement_type,is_simulated,real_inference,note
+SimulatedNPU,52.086,4,simulated,True,False,"Simulated via time.sleep multiplier, not real hardware"
+CPU,0.397,4,real_hardware,False,True,Real hardware measurement

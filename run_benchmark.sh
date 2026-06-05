@@ -53,10 +53,24 @@ info "Python 版本检查通过: $PY_VERSION (>= 3.9)"
 # --- 虚拟环境 ---
 VENV_DIR="$SCRIPT_DIR/.venv"
 
+if [ -d "$VENV_DIR" ] && [ ! -f "$VENV_DIR/bin/activate" ]; then
+    warn "检测到残缺虚拟环境: $VENV_DIR，删除后重新创建。"
+    rm -rf "$VENV_DIR"
+fi
+
 if [ ! -d "$VENV_DIR" ]; then
     info "创建虚拟环境: $VENV_DIR ..."
-    $PYTHON -m venv "$VENV_DIR"
+    if ! $PYTHON -m venv "$VENV_DIR"; then
+        error "创建虚拟环境失败。Ubuntu/Jupyter 环境通常需要先安装 python3-venv。"
+        error "可尝试: sudo apt-get update && sudo apt-get install -y python3-venv"
+        exit 1
+    fi
     info "虚拟环境创建完成。"
+fi
+
+if [ ! -f "$VENV_DIR/bin/activate" ]; then
+    error "虚拟环境仍不可用，缺少: $VENV_DIR/bin/activate"
+    exit 1
 fi
 
 # shellcheck disable=SC1091
@@ -66,7 +80,7 @@ info "已激活虚拟环境: $(python --version)"
 # --- 安装依赖 ---
 info "检查并安装依赖 ..."
 pip install --quiet --upgrade pip
-pip install --quiet matplotlib psutil 2>/dev/null || warn "部分依赖安装失败"
+pip install --quiet numpy matplotlib psutil 2>/dev/null || warn "部分依赖安装失败"
 info "依赖安装完成。"
 
 # --- 创建目录 ---
@@ -74,12 +88,79 @@ mkdir -p "$SCRIPT_DIR/results"
 mkdir -p "$SCRIPT_DIR/figures"
 
 # --- 参数处理 ---
-BENCHMARK_ARGS=""
-if [ $# -gt 0 ]; then
-    BENCHMARK_ARGS="$*"
-fi
+RUN_BASIC=1
+RUN_AGENT=1
+RUN_VERTICAL=1
+RUN_LLM=0
+RUN_MONITOR=1
+BASIC_ARGS=""
+AGENT_ARGS=""
+LLM_ARGS=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --quick)
+            BASIC_ARGS="--matmul-sizes 128 256 --precision-sizes 128 --repeats 2 --mlp-epochs 2 --mlp-samples 256 --batch-size 64"
+            AGENT_ARGS="--doc-counts 1 --chunk-counts 10 --repeats 1"
+            shift
+            ;;
+        --basic-only)
+            RUN_AGENT=0
+            RUN_VERTICAL=0
+            RUN_LLM=0
+            shift
+            ;;
+        --agent-only)
+            RUN_BASIC=0
+            shift
+            ;;
+        --with-llm)
+            RUN_LLM=1
+            shift
+            ;;
+        --allow-llm-hub)
+            RUN_LLM=1
+            LLM_ARGS="$LLM_ARGS --allow-hub"
+            shift
+            ;;
+        --skip-vertical)
+            RUN_VERTICAL=0
+            shift
+            ;;
+        --no-monitor)
+            RUN_MONITOR=0
+            shift
+            ;;
+        *)
+            AGENT_ARGS="$AGENT_ARGS $1"
+            shift
+            ;;
+    esac
+done
 
 START_TIME=$(date +%s)
+
+MONITOR_PID=""
+MONITOR_STOP_FILE="$SCRIPT_DIR/results/.resource_monitor_stop"
+cleanup_monitor() {
+    if [ -n "${MONITOR_PID:-}" ]; then
+        touch "$MONITOR_STOP_FILE"
+        wait "$MONITOR_PID" 2>/dev/null || true
+        MONITOR_PID=""
+    fi
+}
+trap cleanup_monitor EXIT
+
+if [ "$RUN_MONITOR" -eq 1 ]; then
+    rm -f "$MONITOR_STOP_FILE"
+    python "$SCRIPT_DIR/experiments/resource_monitor.py" \
+        --results-dir "$SCRIPT_DIR/results" \
+        --stop-file "$MONITOR_STOP_FILE" \
+        --interval 1 \
+        >/tmp/localdoc_resource_monitor.log 2>&1 &
+    MONITOR_PID=$!
+    info "资源/能效监控已启动 (pid=$MONITOR_PID)"
+fi
 
 # ====== 第 1 步: 环境检查 ======
 echo ""
@@ -94,10 +175,32 @@ else
     warn "环境检查脚本出错，继续执行后续步骤。"
 fi
 
-# ====== 第 2 步: 延迟基准测试 ======
+# ====== 第 2 步: 基础实验 ======
 echo ""
 echo "============================================"
-echo "  第 2 步: 延迟基准测试 (自动检测硬件)"
+echo "  第 2 步: 基础异构实验"
+echo "============================================"
+echo ""
+
+info "运行矩阵乘法、FP32/FP16 精度对比、MLP 训练实验 ..."
+info "如检测到 ROCm PyTorch，将自动加入 ROCm_GPU 实测；否则仅记录 CPU 与 unavailable 状态"
+echo ""
+
+if [ "$RUN_BASIC" -eq 1 ]; then
+    if python "$SCRIPT_DIR/experiments/basic_benchmarks.py" $BASIC_ARGS; then
+        info "基础实验完成。"
+    else
+        error "基础实验执行失败！"
+        exit 1
+    fi
+else
+    warn "跳过基础实验 (--agent-only)"
+fi
+
+# ====== 第 3 步: 延迟基准测试 ======
+echo ""
+echo "============================================"
+echo "  第 3 步: Agent 延迟基准测试 (自动检测硬件)"
 echo "============================================"
 echo ""
 
@@ -106,20 +209,71 @@ info "如有真实 AMD GPU/NPU 硬件，将自动使用真实后端"
 info "如无硬件，将使用 simulated 模式（所有数据标记为 simulated）"
 echo ""
 
-if python "$SCRIPT_DIR/experiments/benchmark_real.py" \
-    $BENCHMARK_ARGS; then
-    info "基准测试完成。"
+if [ "$RUN_AGENT" -eq 1 ]; then
+    if python "$SCRIPT_DIR/experiments/benchmark_real.py" \
+        $AGENT_ARGS; then
+        info "基准测试完成。"
+    else
+        error "基准测试执行失败！"
+        exit 1
+    fi
 else
-    error "基准测试执行失败！"
-    exit 1
+    warn "跳过 Agent benchmark (--basic-only)"
 fi
 
-# ====== 第 3 步: 生成图表 ======
+# ====== 第 4 步: 垂直行业 Demo ======
 echo ""
 echo "============================================"
-echo "  第 3 步: 生成结果图表"
+echo "  第 4 步: 垂直行业应用流程"
 echo "============================================"
 echo ""
+
+if [ "$RUN_VERTICAL" -eq 1 ]; then
+    if python "$SCRIPT_DIR/experiments/demo_vertical_workflow.py" \
+        --results-dir "$SCRIPT_DIR/results"; then
+        info "垂直行业应用 transcript 已生成。"
+    else
+        warn "垂直行业应用流程失败，继续执行。"
+    fi
+else
+    warn "跳过垂直行业应用流程"
+fi
+
+# ====== 第 5 步: 可选本地 LLM Benchmark ======
+echo ""
+echo "============================================"
+echo "  第 5 步: 本地 LLM Benchmark (可选)"
+echo "============================================"
+echo ""
+
+if [ "$RUN_LLM" -eq 1 ]; then
+    if python "$SCRIPT_DIR/experiments/benchmark_llm_generation.py" \
+        --results-dir "$SCRIPT_DIR/results" $LLM_ARGS; then
+        info "本地 LLM benchmark 完成。"
+    else
+        warn "本地 LLM benchmark 失败或模型未准备好，继续执行。"
+    fi
+else
+    warn "默认跳过 LLM benchmark；如需运行请传 --with-llm"
+fi
+
+# 停止能效监控，确保 power_trace.csv 可供绘图读取。
+cleanup_monitor
+
+# ====== 第 6 步: 生成图表 ======
+echo ""
+echo "============================================"
+echo "  第 6 步: 生成结果图表"
+echo "============================================"
+echo ""
+
+if python "$SCRIPT_DIR/experiments/plot_basic_results.py" \
+    --results-dir "$SCRIPT_DIR/results" \
+    --figures-dir "$SCRIPT_DIR/figures"; then
+    info "基础实验图表生成完成。"
+else
+    warn "基础实验图表生成部分失败，但 CSV 结果已保存。"
+fi
 
 if python "$SCRIPT_DIR/experiments/plot_results.py" \
     --results-dir "$SCRIPT_DIR/results" \
@@ -147,7 +301,7 @@ if [ -f "$SCRIPT_DIR/results/environment_report.txt" ]; then
     echo "  📋 results/environment_report.txt"
 fi
 
-for csv in latency_results.csv backend_results.csv resource_usage.csv; do
+for csv in matmul_benchmark.csv precision_compare.csv mlp_train_log.csv latency_results.csv backend_results.csv resource_usage.csv power_trace.csv energy_summary.csv vertical_demo_transcript.csv llm_generation_benchmark.csv; do
     if [ -f "$SCRIPT_DIR/results/$csv" ]; then
         LINES=$(wc -l < "$SCRIPT_DIR/results/$csv")
         echo "  📊 results/$csv  ($LINES 行)"
@@ -155,7 +309,7 @@ for csv in latency_results.csv backend_results.csv resource_usage.csv; do
 done
 
 echo ""
-for img in latency_comparison.png backend_comparison.png resource_usage.png; do
+for img in matmul_benchmark.png precision_compare.png mlp_training_curve.png energy_comparison.png latency_comparison.png backend_comparison.png resource_usage.png; do
     if [ -f "$SCRIPT_DIR/figures/$img" ]; then
         SIZE=$(du -h "$SCRIPT_DIR/figures/$img" | cut -f1)
         echo "  📈 figures/$img  ($SIZE)"

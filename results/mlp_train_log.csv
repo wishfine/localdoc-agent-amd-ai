@@ -1,0 +1,4 @@
+experiment,backend,device,backend_library,available,measurement_type,dtype,epoch,samples,batch_size,loss,accuracy,epoch_time_ms,samples_per_second,note
+mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,1,256,64,1.084233,0.402344,0.4052,631839.69,Real CPU NumPy MLP training with forward/backward/update
+mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,2,256,64,1.070945,0.488281,0.1555,1646737.23,Real CPU NumPy MLP training with forward/backward/update
+mlp_train,ROCm_GPU,cuda,pytorch,False,unavailable,fp32,,256,64,,,,,PyTorch not installed; ROCm GPU benchmark unavailable

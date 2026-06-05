@@ -56,10 +56,24 @@ info "Python 版本检查通过: $PY_VERSION (>= 3.9)"
 # --- 虚拟环境 ---
 VENV_DIR="$SCRIPT_DIR/.venv"
 
+if [ -d "$VENV_DIR" ] && [ ! -f "$VENV_DIR/bin/activate" ]; then
+    warn "检测到残缺虚拟环境: $VENV_DIR，删除后重新创建。"
+    rm -rf "$VENV_DIR"
+fi
+
 if [ ! -d "$VENV_DIR" ]; then
     info "创建虚拟环境: $VENV_DIR ..."
-    $PYTHON -m venv "$VENV_DIR"
+    if ! $PYTHON -m venv "$VENV_DIR"; then
+        error "创建虚拟环境失败。Ubuntu/Jupyter 环境通常需要先安装 python3-venv。"
+        error "可尝试: sudo apt-get update && sudo apt-get install -y python3-venv"
+        exit 1
+    fi
     info "虚拟环境创建完成。"
+fi
+
+if [ ! -f "$VENV_DIR/bin/activate" ]; then
+    error "虚拟环境仍不可用，缺少: $VENV_DIR/bin/activate"
+    exit 1
 fi
 
 # Activate venv
@@ -99,4 +113,4 @@ info "启动 Gradio Web Demo ..."
 info "访问地址: http://localhost:7860"
 echo ""
 
-$PYTHON "$APP_FILE"
+python "$APP_FILE"

@@ -59,6 +59,9 @@ class AMDGPUBackend:
         self._device: Optional[str] = None
         self._hip_available: bool = False
         self._init_attempted: bool = False
+        self._corpus: List[str] = []
+        self._vocab_index: Optional[Dict[str, int]] = None
+        self._idf_values: Optional[List[float]] = None
 
     # ---------- 属性 ----------
 
@@ -140,6 +143,12 @@ class AMDGPUBackend:
         """
         return self.is_available()
 
+    def reset_corpus(self) -> None:
+        """Reset fitted TF-IDF state before rebuilding the document index."""
+        self._corpus = []
+        self._vocab_index = None
+        self._idf_values = None
+
     # ---------- 设备信息 ----------
 
     def get_device_info(self) -> Dict[str, Any]:
@@ -185,68 +194,90 @@ class AMDGPUBackend:
 
     # ---------- 文本嵌入 ----------
 
-    def embed_texts(self, texts: List[str]) -> List[List[float]]:
+    def fit_and_embed(self, texts: List[str]) -> List[List[float]]:
         """
-        使用 AMD GPU 加速的 TF-IDF 文本嵌入。
+        Fit a frozen TF-IDF vocabulary on document texts and embed them.
 
-        将 TF-IDF 计算中的词频-逆文档频率矩阵转换为 PyTorch 张量，
-        并在 GPU 上执行归一化运算，利用并行计算加速。
-
-        如果 GPU 不可用，自动回退到 CPU 纯 Python 计算。
-
-        Args:
-            texts: 待嵌入的文本列表
-
-        Returns:
-            List[List[float]]: 每条文本对应的嵌入向量
-
-        ROCm/PyTorch 要求：
-            需要安装 ROCm 版 PyTorch：
-            pip install torch --index-url https://download.pytorch.org/whl/rocm6.0
+        The vocabulary is then reused by transform() for query embedding so
+        document and query vectors keep the same dimensionality.
         """
         self._lazy_init()
 
         if not texts:
             return []
 
-        # ---------- 分词与词汇表构建（CPU 上进行） ----------
+        self._corpus = list(texts)
         tokenized_docs = [self._tokenize(t) for t in texts]
         vocab_set: set = set()
         for tokens in tokenized_docs:
             vocab_set.update(tokens)
         feature_names: List[str] = sorted(vocab_set)
-        vocab_index = {w: i for i, w in enumerate(feature_names)}
+        self._vocab_index = {w: i for i, w in enumerate(feature_names)}
         vocab_size = len(feature_names)
 
-        # 计算 IDF
         doc_freq: Counter = Counter()
         n_docs = len(texts)
         for tokens in tokenized_docs:
             for t in set(tokens):
                 doc_freq[t] += 1
-        idf_values = [0.0] * vocab_size
-        for word, idx in vocab_index.items():
-            idf_values[idx] = math.log((n_docs + 1) / (1 + doc_freq[word])) + 1.0
+        self._idf_values = [0.0] * vocab_size
+        for word, idx in self._vocab_index.items():
+            self._idf_values[idx] = math.log((n_docs + 1) / (1 + doc_freq[word])) + 1.0
 
-        # 构建原始 TF-IDF 矩阵
-        raw_matrix = []
+        raw_matrix = self._build_raw_matrix_from_tokens(tokenized_docs)
+        return self._normalize_matrix(raw_matrix)
+
+    def transform(self, texts: List[str]) -> List[List[float]]:
+        """
+        Embed texts with the frozen vocabulary built by fit_and_embed().
+
+        This is used for queries and does not mutate the corpus.
+        """
+        if not texts:
+            return []
+        if self._vocab_index is None or self._idf_values is None:
+            return self.fit_and_embed(texts)
+        tokenized_docs = [self._tokenize(t) for t in texts]
+        raw_matrix = self._build_raw_matrix_from_tokens(tokenized_docs)
+        return self._normalize_matrix(raw_matrix)
+
+    def embed_texts(self, texts: List[str]) -> List[List[float]]:
+        """
+        使用 AMD GPU 加速的 TF-IDF 文本嵌入。
+
+        首次调用构建并冻结词表；后续调用使用 transform()，避免查询文本
+        污染语料库或造成向量维度不一致。
+        """
+        if self._vocab_index is not None:
+            return self.transform(texts)
+        return self.fit_and_embed(texts)
+
+    def _build_raw_matrix_from_tokens(self, tokenized_docs: List[List[str]]) -> List[List[float]]:
+        """Build an unnormalized TF-IDF matrix from already tokenized texts."""
+        assert self._vocab_index is not None
+        assert self._idf_values is not None
+        vocab_size = len(self._vocab_index)
+        raw_matrix: List[List[float]] = []
         for tokens in tokenized_docs:
             tf = Counter(tokens)
             total = len(tokens) if tokens else 1
             vec = [0.0] * vocab_size
             for word, count in tf.items():
-                if word in vocab_index:
-                    vec[idx := vocab_index[word]] = (count / total) * idf_values[idx]
+                if word in self._vocab_index:
+                    idx = self._vocab_index[word]
+                    vec[idx] = (count / total) * self._idf_values[idx]
             raw_matrix.append(vec)
+        return raw_matrix
 
-        # ---------- GPU 加速归一化 ----------
+    def _normalize_matrix(self, raw_matrix: List[List[float]]) -> List[List[float]]:
+        """Normalize TF-IDF rows, using ROCm GPU when available."""
+        vocab_size = len(raw_matrix[0]) if raw_matrix else 0
         if self.is_available() and self._torch is not None and self._device is not None:
             logger.info("AMD GPU 后端：在 %s 上对 %d 条文本进行嵌入（维度=%d）",
-                        self._device, len(texts), vocab_size)
+                        self._device, len(raw_matrix), vocab_size)
             try:
                 t = self._torch
                 tensor = t.tensor(raw_matrix, dtype=t.float32, device=self._device)
-                # L2 归一化
                 norms = tensor.norm(dim=1, keepdim=True).clamp(min=1e-12)
                 tensor = tensor / norms
                 result = tensor.cpu().tolist()
@@ -257,7 +288,6 @@ class AMDGPUBackend:
                     "AMD GPU 后端：GPU 计算出错 (%s)，回退到 CPU 计算", e
                 )
 
-        # ---------- CPU 回退 ----------
         logger.info("AMD GPU 后端：回退到 CPU 计算")
         vectors: List[List[float]] = []
         for vec in raw_matrix:
@@ -360,7 +390,7 @@ class AMDGPUBackend:
 
         if best_sentence:
             return best_sentence[:max_length]
-        return context[0][:max_length]
+        return context_list[0][:max_length]
 
     # ---------- 辅助方法 ----------
 

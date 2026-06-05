@@ -27,7 +27,8 @@
 | 本地 AI 推理 | 文档问答全流程本地完成，无需联网 | 文档解析、向量检索、答案生成均在本地执行 |
 | 端到端应用 | 上传文档 -> 切块 -> 嵌入 -> 检索 -> 回答 -> 资源调度展示 | 完整 RAG Pipeline + Gradio UI |
 | 异构资源分工 | CPU / GPU / NPU 后端抽象与调度策略 | CPU 实际执行；GPU/NPU 接口预留，需真实硬件激活 |
-| 性能与能效 | 当前为 simulated latency benchmark | 使用模拟延迟，真实硬件可替换后端后补测 |
+| 基础异构实验 | 矩阵乘法、FP32/FP16、MLP 训练 | 生成评分表要求的 CSV 与图表；ROCm 可用时自动加入 GPU 实测 |
+| 性能与能效 | 延迟 benchmark + CPU/内存/ROCm 功耗采样 | `resource_monitor.py` 生成 `power_trace.csv` 与 `energy_summary.csv`；无 ROCm 时明确标记功耗不可用 |
 
 ---
 
@@ -120,11 +121,43 @@ bash run_demo.sh
 
 ### 运行基准测试
 
+推荐使用全量实验入口：
+
+```bash
+bash run_all_experiments.sh
+```
+
+该脚本会依次运行单元测试、环境检查、基础异构实验、Agent benchmark、垂直行业流程、可选本地 LLM benchmark、能耗采样和图表生成，并生成 `results/full_experiment_run.log` 与 `results/experiment_manifest.txt`。
+
+快速验证模式：
+
+```bash
+bash run_all_experiments.sh --quick
+```
+
+单独运行 benchmark 子流程：
+
 ```bash
 bash run_benchmark.sh
 ```
 
-自动执行各模块性能测试与多后端对比，结果输出到 `results/` 目录。在无 AMD 硬件的环境下，所有数据均为模拟结果。
+自动执行环境检查、基础异构实验、Agent 延迟测试、资源/能耗采样、垂直行业流程复现与图表生成，结果输出到 `results/` 和 `figures/` 目录。在无 AMD 硬件的环境下，ROCm GPU 行会标记为 `unavailable`，GPU/NPU Agent 数据会标记为 `simulated` 或明确说明 CPU fallback。
+
+常用参数：
+
+```bash
+# 快速 smoke test，适合改代码后验证
+bash run_benchmark.sh --quick
+
+# 只跑评分表基础实验：matmul / FP16 / MLP
+bash run_benchmark.sh --basic-only
+
+# 额外运行本地 LLM 生成 benchmark（默认只使用本地模型，不联网下载）
+bash run_benchmark.sh --with-llm
+
+# 允许 benchmark 阶段从 Hugging Face Hub 拉取模型
+bash run_benchmark.sh --allow-llm-hub
+```
 
 ### 运行测试
 
@@ -141,9 +174,16 @@ python -m pytest tests/ -v
 | 文件路径 | 说明 |
 |----------|------|
 | `results/environment_report.txt` | 环境检测报告（硬件、驱动、后端可用性） |
+| `results/rocminfo.txt` / `results/rocm_smi.txt` / `results/hipcc_version.txt` / `results/hipconfig_full.txt` | ROCm 命令行原始证据；无 ROCm 时记录 `COMMAND NOT FOUND` |
+| `results/matmul_benchmark.csv` | CPU/ROCm GPU 矩阵乘法 benchmark（平均时间、标准差、加速比） |
+| `results/precision_compare.csv` | FP32/FP16 耗时、加速比、最大/平均绝对误差 |
+| `results/mlp_train_log.csv` | MLP 前向、反向、参数更新训练日志（loss、accuracy、epoch time） |
 | `results/latency_results.csv` | 延迟基准测试结果（CSV 中 `measurement_type` 列区分 real/simulated） |
 | `results/backend_results.csv` | 多后端对比结果（含 `real_inference` 字段） |
 | `results/resource_usage.csv` | 系统资源使用快照 |
+| `results/power_trace.csv` / `results/energy_summary.csv` | CPU/内存/ROCm GPU 功耗采样与能耗估算 |
+| `results/vertical_demo_transcript.csv` | 企业内网政策问答端到端演示 transcript，含问题、回答、来源、分数、调度 trace |
+| `results/llm_generation_benchmark.csv` | 可选本地 LLM 生成 benchmark；模型缺失时写入 skipped 记录 |
 | `figures/*.png` | 性能对比图表 |
 
 ---
@@ -184,6 +224,10 @@ localdoc-agent-amd-ai/
 ├── experiments/                        # 实验脚本
 │   ├── __init__.py
 │   ├── check_environment.py            # 环境检测（硬件/驱动/后端/内核）
+│   ├── basic_benchmarks.py             # 基础实验：matmul / FP16 / MLP
+│   ├── resource_monitor.py             # CPU/内存/ROCm GPU 功耗采样
+│   ├── demo_vertical_workflow.py        # 垂直行业端到端 QA transcript
+│   ├── plot_basic_results.py           # 基础实验绘图
 │   ├── benchmark_real.py               # 真实硬件基准测试（自动检测 GPU/NPU）
 │   ├── benchmark_latency.py            # 模拟延迟基准测试（simulated only）
 │   ├── benchmark_llm_generation.py     # LLM 生成延迟测试
@@ -200,14 +244,27 @@ localdoc-agent-amd-ai/
 │
 ├── results/                            # 实验结果 CSV
 │   ├── environment_report.txt          # 环境检测报告
+│   ├── matmul_benchmark.csv            # 矩阵乘法基础实验
+│   ├── precision_compare.csv           # FP32/FP16 精度对比
+│   ├── mlp_train_log.csv               # MLP 训练日志
 │   ├── latency_results.csv             # 延迟测试结果
 │   ├── backend_results.csv             # 后端对比结果
-│   └── resource_usage.csv              # 资源使用快照
+│   ├── resource_usage.csv              # 资源使用快照
+│   ├── power_trace.csv                 # 资源/功耗采样时间序列
+│   ├── energy_summary.csv              # 能耗估算摘要
+│   └── vertical_demo_transcript.csv    # 企业内网应用流程复现记录
 │
 ├── figures/                            # 实验图表
 │   ├── latency_comparison.png          # 延迟对比图
+│   ├── matmul_benchmark.png            # 矩阵乘法耗时图
+│   ├── precision_compare.png           # FP32/FP16 对比图
+│   ├── mlp_training_curve.png          # MLP loss/accuracy 曲线
 │   ├── backend_comparison.png          # 后端性能对比图
+│   ├── energy_comparison.png           # 资源/功耗采样图
 │   └── resource_usage.png              # 资源使用图
+│
+├── examples/                           # 垂直行业演示材料
+│   └── enterprise_policy/              # 企业内网政策/应急处置示例文档
 │
 └── docs/                               # 文档目录
     ├── system_design.md                # 系统设计文档
@@ -220,9 +277,9 @@ localdoc-agent-amd-ai/
 
 ## 当前限制说明
 
-1. **无真实 AMD 硬件**：当前开发环境中没有 AMD Ryzen AI MAX+ 处理器，GPU 后端和 NPU 后端均使用 CPU fallback + simulated backend。所有 GPU/NPU 性能数据均为仿真结果，不代表真实硬件表现。
+1. **无真实 AMD 硬件**：当前开发环境中没有 AMD Ryzen AI MAX+ 处理器。基础实验会产生真实 CPU baseline，ROCm GPU 行在无硬件时标记为 `unavailable`；Agent 的 GPU/NPU 数据在无硬件时标记为 `simulated` 或 CPU fallback，不代表真实硬件表现。
 
-2. **Simulated backend 数据**：`results/` 目录下的延迟数据和后端对比数据均为 simulated backend 产出。相关 CSV 文件和图表中已标注 "simulated" 字样。
+2. **NPU 后端仍是检测/接口层**：当前 `AMDNPUBackend` 能检测 ONNX Runtime EP，但没有真实 ONNX NPU 推理模型；即使检测到 EP，也会在 benchmark 中标记为 `cpu_fallback_with_hardware_detected`，不会标为 `real_hardware`。
 
 3. **TF-IDF 嵌入（非神经网络）**：当前向量嵌入模块使用 TF-IDF，而非神经网络嵌入模型。在真实 AMD GPU/NPU 环境下可替换为 Dense Embedding 模型以利用硬件加速。
 

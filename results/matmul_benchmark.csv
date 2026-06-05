@@ -1,0 +1,5 @@
+experiment,backend,device,backend_library,available,measurement_type,size,dtype,repeats,avg_ms,std_ms,min_ms,max_ms,gflops,speedup_vs_cpu,speedup_baseline_backend,torch_version,torch_hip_version,note
+matmul,CPU,numpy_cpu,numpy,True,real_cpu,128,fp32,2,0.0063,0.0008,0.0055,0.0071,662.2393,1.0,CPU,,,Real CPU NumPy matmul
+matmul,ROCm_GPU,cuda,pytorch,False,unavailable,128,fp32,2,,,,,,,,,,PyTorch not installed; ROCm GPU benchmark unavailable
+matmul,CPU,numpy_cpu,numpy,True,real_cpu,256,fp32,2,0.0244,0.0002,0.0242,0.0247,1373.0716,1.0,CPU,,,Real CPU NumPy matmul
+matmul,ROCm_GPU,cuda,pytorch,False,unavailable,256,fp32,2,,,,,,,,,,PyTorch not installed; ROCm GPU benchmark unavailable

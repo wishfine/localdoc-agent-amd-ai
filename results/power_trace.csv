@@ -1,0 +1,4 @@
+timestamp,elapsed_s,cpu_percent,memory_percent,memory_used_mb,gpu_power_w,gpu_power_source,is_rocm_power_available
+2026-06-03T11:13:46,0.0,0.0,78.7,6529.95,,rocm-smi not found,False
+2026-06-03T11:13:47,1.013,11.5,78.4,6495.86,,rocm-smi not found,False
+2026-06-03T11:13:48,2.018,12.1,78.2,6455.5,,rocm-smi not found,False

@@ -723,13 +723,17 @@ bash run_benchmark.sh
 
 # 检查结果中后端标识
 python3 -c "
-import json
-with open('results/benchmark_results.json') as f:
-    data = json.load(f)
-print('后端测试结果:')
-for backend, results in data.get('backend_tests', {}).items():
-    status = results.get('status', 'unknown')
-    print(f'  {backend}: {status}')
+import csv
+for path in ['results/backend_results.csv', 'results/latency_results.csv']:
+    print('\\n' + path)
+    with open(path, newline='', encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            print(
+                row.get('backend', ''),
+                row.get('measurement_type', ''),
+                row.get('real_inference', ''),
+                row.get('note', ''),
+            )
 "
 ```
 

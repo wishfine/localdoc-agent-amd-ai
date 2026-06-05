@@ -496,7 +496,10 @@ def main():
         print("  ⚠️ All results are SIMULATED or CPU-only.")
         print("  To get real GPU/NPU data, run on AMD hardware.")
     for name, info in backends.items():
-        if info["available"] and not info["real_inference"]:
+        if name == "SimulatedNPU":
+            print("  ⚠️ SimulatedNPU: CPU execution with artificial delay.")
+            print("     CSV marked as 'simulated', NOT 'real_hardware'.")
+        elif info["available"] and not info["real_inference"]:
             print(f"  ⚠️ {name}: EP detected but inference is CPU fallback.")
             print(f"     CSV marked as 'cpu_fallback_with_hardware_detected', NOT 'real_hardware'.")
     print("=" * 60)

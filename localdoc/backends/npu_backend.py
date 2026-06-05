@@ -39,6 +39,7 @@ import re
 from collections import Counter
 from typing import List, Optional, Dict, Any
 
+from localdoc.backends.cpu_backend import CPUBackend
 from localdoc.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -62,6 +63,7 @@ class AMDNPUBackend:
         self._npu_available: bool = False
         self._init_attempted: bool = False
         self._ep_name: Optional[str] = None  # 实际使用的 Execution Provider 名称
+        self._cpu_backend = CPUBackend()
 
     # ---------- 属性 ----------
 
@@ -156,6 +158,10 @@ class AMDNPUBackend:
         """
         return False
 
+    def reset_corpus(self) -> None:
+        """Reset fitted TF-IDF state before rebuilding the document index."""
+        self._cpu_backend.reset_corpus()
+
     # ---------- 设备信息 ----------
 
     def get_device_info(self) -> Dict[str, Any]:
@@ -191,14 +197,28 @@ class AMDNPUBackend:
 
     # ---------- 文本嵌入 ----------
 
+    def fit_and_embed(self, texts: List[str]) -> List[List[float]]:
+        """
+        Fit a frozen TF-IDF vocabulary and embed document texts.
+
+        Current NPU implementation detects Ryzen AI EPs but does not run an
+        ONNX model on the NPU, so embedding is delegated to the CPU TF-IDF
+        backend and has_real_inference() remains False.
+        """
+        self._lazy_init()
+        return self._cpu_backend.fit_and_embed(texts)
+
+    def transform(self, texts: List[str]) -> List[List[float]]:
+        """Embed query texts with the fitted document vocabulary."""
+        self._lazy_init()
+        return self._cpu_backend.transform(texts)
+
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """
-        使用 AMD NPU 加速的 TF-IDF 文本嵌入。
+        兼容旧接口的文本嵌入入口。
 
-        当前实现采用 TF-IDF 特征提取 + ONNX Runtime EP 加速归一化的
-        混合方案。在 NPU 真正可用时，归一化和矩阵运算会通过 NPU EP 执行。
-
-        如果 NPU 不可用，自动回退到 CPU 纯 Python 计算。
+        当前版本只检测 NPU EP，不创建真实 ONNX 推理会话，因此这里委托
+        CPUBackend 的冻结词表实现，避免查询/文档向量维度不一致。
 
         Args:
             texts: 待嵌入的文本列表
@@ -216,66 +236,7 @@ class AMDNPUBackend:
         if not texts:
             return []
 
-        # ---------- TF-IDF 特征提取（CPU 上进行） ----------
-        tokenized_docs = [self._tokenize(t) for t in texts]
-        vocab_set: set = set()
-        for tokens in tokenized_docs:
-            vocab_set.update(tokens)
-        feature_names: List[str] = sorted(vocab_set)
-        vocab_index = {w: i for i, w in enumerate(feature_names)}
-        vocab_size = len(feature_names)
-        n_docs = len(texts)
-
-        doc_freq: Counter = Counter()
-        for tokens in tokenized_docs:
-            for t in set(tokens):
-                doc_freq[t] += 1
-        idf_values = [0.0] * vocab_size
-        for word, idx in vocab_index.items():
-            idf_values[idx] = math.log((n_docs + 1) / (1 + doc_freq[word])) + 1.0
-
-        raw_matrix: List[List[float]] = []
-        for tokens in tokenized_docs:
-            tf = Counter(tokens)
-            total = len(tokens) if tokens else 1
-            vec = [0.0] * vocab_size
-            for word, count in tf.items():
-                if word in vocab_index:
-                    i = vocab_index[word]
-                    vec[i] = (count / total) * idf_values[i]
-            raw_matrix.append(vec)
-
-        # ---------- NPU 加速归一化 ----------
-        if self.is_available() and self._ort is not None:
-            logger.info(
-                "NPU 后端：使用 %s 对 %d 条文本进行嵌入（维度=%d）",
-                self._ep_name, len(texts), vocab_size,
-            )
-            try:
-                import numpy as np
-
-                np_array = np.array(raw_matrix, dtype=np.float32)
-                # L2 归一化：利用 numpy 作为计算内核
-                # 在完整实现中，这里会创建一个 ONNX 模型并通过 NPU EP 执行
-                norms = np.linalg.norm(np_array, axis=1, keepdims=True)
-                norms = np.clip(norms, 1e-12, None)
-                normalized = np_array / norms
-
-                result = normalized.tolist()
-                logger.info("NPU 后端：嵌入计算完成（通过 %s）", self._ep_name)
-                return result
-            except Exception as e:
-                logger.warning("NPU 后端：NPU 计算出错 (%s)，回退到 CPU", e)
-
-        # ---------- CPU 回退 ----------
-        logger.info("NPU 后端：回退到 CPU 计算")
-        vectors: List[List[float]] = []
-        for vec in raw_matrix:
-            norm = math.sqrt(sum(v * v for v in vec))
-            if norm > 0:
-                vec = [v / norm for v in vec]
-            vectors.append(vec)
-        return vectors
+        return self._cpu_backend.embed_texts(texts)
 
     # ---------- 问答生成 ----------
 
@@ -366,7 +327,7 @@ class AMDNPUBackend:
 
         if best_sentence:
             return best_sentence[:max_length]
-        return context[0][:max_length]
+        return context_list[0][:max_length]
 
     # ---------- 辅助方法 ----------
 

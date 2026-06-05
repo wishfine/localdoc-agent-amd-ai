@@ -82,6 +82,18 @@ class LocalLLMBackend:
         model_dir = Path(self.model_path)
         return model_dir.exists() and (model_dir / "config.json").exists()
 
+    def reset_corpus(self) -> None:
+        """Reset the delegated CPU TF-IDF embedding state."""
+        self._cpu_backend.reset_corpus()
+
+    def fit_and_embed(self, texts: List[str]) -> List[List[float]]:
+        """Fit document embeddings with the delegated CPU TF-IDF backend."""
+        return self._cpu_backend.fit_and_embed(texts)
+
+    def transform(self, texts: List[str]) -> List[List[float]]:
+        """Embed queries with the frozen document vocabulary."""
+        return self._cpu_backend.transform(texts)
+
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """
         Embedding: delegate to CPUBackend TF-IDF.

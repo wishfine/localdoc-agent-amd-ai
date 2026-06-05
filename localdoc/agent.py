@@ -68,8 +68,16 @@ class LocalDocAgent:
             self.backend.reset_corpus()
         self.embedding_engine.reset()
 
-        # 用全部 chunk 构建词汇表和向量
-        embeddings = self.embedding_engine.embed_chunks(self._all_chunks)
+        # 用全部 chunk 构建词汇表和向量。调度器在这里记录 embedding
+        # 阶段的策略选择；实际计算由 embedding_engine 及其后端完成。
+        if self.scheduler:
+            embeddings = self.scheduler.execute(
+                BenchmarkTaskType.EMBEDDING,
+                self.embedding_engine.embed_chunks,
+                self._all_chunks,
+            )
+        else:
+            embeddings = self.embedding_engine.embed_chunks(self._all_chunks)
 
         # 重建 retriever 索引
         self.retriever.clear()
@@ -127,12 +135,27 @@ class LocalDocAgent:
         logger.info(f"开始导入目录: {dir_path}")
         t_start = time.time()
 
-        documents = self.loader.load_directory(dir_path)
+        if self.scheduler:
+            documents = self.scheduler.execute(
+                BenchmarkTaskType.DOCUMENT_LOADING,
+                self.loader.load_directory,
+                dir_path,
+            )
+        else:
+            documents = self.loader.load_directory(dir_path)
         logger.info(f"  发现 {len(documents)} 个可加载文件")
 
         for doc in documents:
             try:
-                chunks = self.chunker.chunk_text(doc["content"], source=doc["source"])
+                if self.scheduler:
+                    chunks = self.scheduler.execute(
+                        BenchmarkTaskType.CHUNKING,
+                        self.chunker.chunk_text,
+                        doc["content"],
+                        source=doc["source"],
+                    )
+                else:
+                    chunks = self.chunker.chunk_text(doc["content"], source=doc["source"])
                 self._all_chunks.extend(chunks)
                 self._ingested_files.append(doc["source"])
             except Exception as e:

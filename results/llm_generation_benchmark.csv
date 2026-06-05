@@ -1,0 +1,2 @@
+query_id,query,model_name,model_id,device,torch_cuda_available,torch_hip_version,model_load_time_s,generation_time_s,input_chars,output_chars,input_tokens,output_tokens,tokens_per_second,memory_before_mb,memory_after_mb,is_local_llm,is_amd_hardware_benchmark,is_rocm_runtime_detected,note
+SKIPPED,Model not found,Qwen3-1.7B,Qwen/Qwen3-1.7B,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,True,False,False,Model not found. Skipped. Not AMD hardware benchmark.

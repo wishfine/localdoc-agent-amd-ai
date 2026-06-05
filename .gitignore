@@ -138,7 +138,31 @@ cython_debug/
 
 # Project specific
 results/*.csv
+results/.resource_monitor_stop
+results/full_experiment_run.log
+results/experiment_manifest.txt
+!results/matmul_benchmark.csv
+!results/precision_compare.csv
+!results/mlp_train_log.csv
+!results/latency_results.csv
+!results/backend_results.csv
+!results/resource_usage.csv
+!results/power_trace.csv
+!results/energy_summary.csv
+!results/vertical_demo_transcript.csv
+!results/llm_generation_benchmark.csv
+!results/rocminfo.txt
+!results/rocm_smi.txt
+!results/hipcc_version.txt
+!results/hipconfig_full.txt
 figures/*.png
+!figures/matmul_benchmark.png
+!figures/precision_compare.png
+!figures/mlp_training_curve.png
+!figures/energy_comparison.png
+!figures/latency_comparison.png
+!figures/backend_comparison.png
+!figures/resource_usage.png
 *.db
 *.sqlite
 

@@ -1,6 +1,6 @@
 ============================================================
   LocalDoc Agent - 环境检查报告
-  生成时间: 2026-06-01 20:58:19
+  生成时间: 2026-06-03 11:13:46
 ============================================================
 
 ## Python 环境
@@ -12,10 +12,14 @@
 
 ## 内核信息
   内核版本: 25.5.0
-  Strix Halo 兼容: True
+  Strix Halo 兼容: None
+  ⚠️ Platform is Darwin, not Linux. Strix Halo kernel check skipped.
 
 ## 内存信息
-  note: psutil not installed, memory info unavailable
+  total_memory_mb: 16384
+  available_memory_mb: 3497
+  memory_percent: 78.7
+  cpu_count: 10
 
 ## PyTorch 环境
   torch 已安装: False
@@ -25,6 +29,14 @@
   torch.cuda.is_available(): False
   GPU 名称: None
   GPU 数量: 0
+  GPU 架构: None
+
+## ROCm 命令行工具证据
+  rocminfo: False -> /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/results/rocminfo.txt
+  rocm-smi: False -> /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/results/rocm_smi.txt
+  hipcc: False -> /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/results/hipcc_version.txt
+  hipconfig: False -> /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/results/hipconfig_full.txt
+  gfx 架构: []
 
 ## ONNX Runtime 环境
   onnxruntime 已安装: False

@@ -189,7 +189,7 @@ def plot_backend_comparison(
     for bar, val, mt in zip(bars, avg_ms, mtypes):
         label = f"{val:.1f} ms"
         if mt != "real_hardware":
-            label += "\n⚠️"
+            label += "\nnon-real"
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(avg_ms) * 0.02,
                 label, ha="center", va="bottom", fontsize=9, fontweight="bold")
 

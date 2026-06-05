@@ -1,0 +1,9 @@
+test,doc_count,chunk_count,backend,latency_s,latency_ms,measurement_type,is_simulated,real_inference,note,answer_length
+embedding,1,16,CPU,0.000774,0.774,real_hardware,False,True,Real hardware measurement,
+embedding,1,16,SimulatedNPU,0.088107,88.107,simulated,True,False,"Simulated via time.sleep multiplier, not real hardware",
+query_embedding,,10,CPU,1.7e-05,0.017,real_hardware,False,True,Real hardware measurement,
+query_embedding,,10,SimulatedNPU,0.007591,7.591,simulated,True,False,"Simulated via time.sleep multiplier, not real hardware",
+generation,,,CPU,9.4e-05,0.094,real_hardware,False,True,Real hardware measurement,28
+generation,,,SimulatedNPU,0.025748,25.748,simulated,True,False,"Simulated via time.sleep multiplier, not real hardware",28
+end_to_end_rag,1,10,CPU,0.000704,0.704,real_hardware,False,True,Real hardware measurement,
+end_to_end_rag,1,10,SimulatedNPU,0.086898,86.898,simulated,True,False,"Simulated via time.sleep multiplier, not real hardware",

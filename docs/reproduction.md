@@ -190,7 +190,44 @@ print(answer)
 
 ## 4. 运行基准测试
 
-### 4.1 执行基准测试
+### 4.1 一键全量实验
+
+推荐优先运行：
+
+```bash
+bash run_all_experiments.sh
+```
+
+该脚本会自动完成：
+
+1. 单元测试。
+2. 环境检查与 ROCm 原始证据采集。
+3. 矩阵乘法、FP32/FP16、MLP 基础实验。
+4. Agent embedding / query / generation / e2e RAG benchmark。
+5. 垂直行业企业内网政策问答 transcript。
+6. 资源与能效采样。
+7. 可选本地 LLM benchmark（无本地模型时写入 skipped，不联网下载）。
+8. 图表生成、运行日志和实验 manifest。
+
+输出文件：
+
+- `results/full_experiment_run.log`
+- `results/experiment_manifest.txt`
+- `docs/screenshot_checklist.md`
+
+快速验证可运行：
+
+```bash
+bash run_all_experiments.sh --quick
+```
+
+在 AMD 真机上如需允许脚本自动从 Hugging Face Hub 拉取 LLM 模型：
+
+```bash
+bash run_all_experiments.sh --allow-llm-hub
+```
+
+### 4.2 执行 benchmark 子流程
 
 ```bash
 bash run_benchmark.sh
@@ -198,24 +235,70 @@ bash run_benchmark.sh
 
 基准测试脚本将自动执行以下测试项目：
 
-1. **模块单独测试**：
-   - Loader 加载性能（不同格式、不同文件大小）
-   - Chunker 切块性能（不同参数配置）
-   - Embedder 嵌入性能（不同文档规模）
-   - Retriever 检索性能（不同索引大小）
-   - Generator 生成性能
+1. **环境检查**：
+   - Python、系统平台、内存信息
+   - PyTorch 版本、`torch.version.hip`、`torch.cuda.is_available()`
+   - ONNX Runtime providers、Ryzen AI / VitisAI EP 状态
+   - `rocminfo`、`rocm-smi`、`hipcc --version`、`hipconfig --full` 原始输出
 
-2. **后端对比测试**：
-   - CPU 后端基准测试
-   - GPU 后端测试（如不可用则跳过并记录）
-   - NPU 后端测试（如不可用则跳过并记录）
+2. **基础异构实验**：
+   - 矩阵乘法 benchmark，输出 `results/matmul_benchmark.csv`
+   - FP32/FP16 精度对比，输出 `results/precision_compare.csv`
+   - MLP 单卡训练日志，输出 `results/mlp_train_log.csv`
 
-3. **端到端流程测试**：
-   - 小规模文档（~1KB）
-   - 中等规模文档（~100KB）
-   - 大规模文档（~1MB）
+3. **Agent 应用基准测试**：
+   - Embedding benchmark
+   - Query embedding benchmark
+   - Generation benchmark
+   - End-to-end RAG benchmark
 
-### 4.2 测试参数配置
+4. **资源与能效采样**：
+   - CPU/内存使用率时间序列，输出 `results/power_trace.csv`
+   - ROCm GPU 功耗采样与估算能耗，输出 `results/energy_summary.csv`
+   - 无 `rocm-smi` 时明确标记功耗不可用
+
+5. **垂直行业流程复现**：
+   - 摄入 `examples/enterprise_policy/` 的企业内网政策文档
+   - 固定问题问答、来源引用、检索分数、调度 trace
+   - 输出 `results/vertical_demo_transcript.csv`
+
+6. **图表生成**：
+   - `figures/matmul_benchmark.png`
+   - `figures/precision_compare.png`
+   - `figures/mlp_training_curve.png`
+   - `figures/energy_comparison.png`
+   - `figures/latency_comparison.png`
+   - `figures/backend_comparison.png`
+   - `figures/resource_usage.png`
+
+如果当前环境没有 ROCm PyTorch，`ROCm_GPU` 行会标记为 `unavailable`；在 AMD ROCm 环境中重新运行同一命令即可生成真实 GPU 实测行。
+
+### 4.3 常用运行模式
+
+```bash
+# 快速 smoke test：缩小矩阵规模、epoch 和重复次数
+bash run_benchmark.sh --quick
+
+# 只运行基础实验，适合先补齐评分表的 matmul / FP16 / MLP 数据
+bash run_benchmark.sh --basic-only
+
+# 只运行 Agent benchmark 和垂直行业流程
+bash run_benchmark.sh --agent-only
+
+# 跳过后台资源监控
+bash run_benchmark.sh --no-monitor
+
+# 跳过垂直行业流程
+bash run_benchmark.sh --skip-vertical
+
+# 运行可选本地 LLM benchmark，默认不联网下载模型
+bash run_benchmark.sh --with-llm
+
+# 允许 LLM benchmark 从 Hugging Face Hub 拉取模型
+bash run_benchmark.sh --allow-llm-hub
+```
+
+### 4.4 测试参数配置
 
 可通过环境变量调整测试参数：
 
@@ -233,14 +316,15 @@ export CHUNK_SIZE=512
 export TOP_K=5
 ```
 
-### 4.3 预期运行时间
+### 4.5 预期运行时间
 
 | 测试项目 | 预期耗时 | 说明 |
 |----------|----------|------|
-| 模块单独测试 | 30-60 秒 | 快速单元级测试 |
-| 后端对比测试 | 1-3 分钟 | 多后端重复测试 |
-| 端到端流程测试 | 2-5 分钟 | 含文档加载与处理 |
-| 全部测试 | 5-10 分钟 | 取决于机器性能 |
+| `--quick` | 30-90 秒 | 快速验证代码与输出文件 |
+| `--basic-only` | 1-5 分钟 | 取决于矩阵规模与 MLP epoch |
+| Agent benchmark | 1-3 分钟 | 多后端重复测试 |
+| 垂直行业流程 | 10-30 秒 | 示例文档摄入与固定问答 |
+| 全部测试 | 5-15 分钟 | 取决于机器性能；LLM benchmark 另计 |
 
 ---
 
@@ -252,57 +336,50 @@ export TOP_K=5
 
 ```
 results/
-├── benchmark_results.json      # 原始测试数据（JSON 格式）
-├── performance_report.txt      # 可读性能报告
-├── comparison_chart.png        # 性能对比图（需 matplotlib）
-└── system_info.json            # 测试环境信息
+├── environment_report.txt          # 环境检测汇总
+├── rocminfo.txt                    # rocminfo 原始输出或 COMMAND NOT FOUND
+├── rocm_smi.txt                    # rocm-smi 原始输出或 COMMAND NOT FOUND
+├── hipcc_version.txt               # hipcc --version 原始输出
+├── hipconfig_full.txt              # hipconfig --full 原始输出
+├── matmul_benchmark.csv            # 矩阵乘法基础实验
+├── precision_compare.csv           # FP32/FP16 性能与误差
+├── mlp_train_log.csv               # MLP 前向/反向/更新训练日志
+├── latency_results.csv             # Agent 延迟 benchmark
+├── backend_results.csv             # 后端对比与 real/simulated 标注
+├── resource_usage.csv              # 系统资源快照
+├── power_trace.csv                 # CPU/内存/ROCm 功耗采样
+├── energy_summary.csv              # 能耗估算摘要
+├── vertical_demo_transcript.csv    # 垂直行业端到端问答记录
+└── llm_generation_benchmark.csv    # 可选本地 LLM 生成 benchmark
 ```
 
-### 5.2 查看性能报告
+### 5.2 查看环境证据
 
 ```bash
-# 查看可读报告
-cat results/performance_report.txt
+cat results/environment_report.txt
+cat results/rocminfo.txt
+cat results/rocm_smi.txt
 ```
 
-报告内容包括：
-- 测试环境信息（CPU 型号、内存大小、操作系统等）
-- 各模块性能指标（平均耗时、标准差、吞吐量）
-- 后端对比结果（CPU / GPU / NPU 各项指标）
-- 端到端流程耗时分析
+在真实 AMD ROCm 环境下，重点检查：
+- `torch.version.hip` 非空
+- `torch.cuda.is_available()` 为 True
+- `rocminfo.txt` 中存在 `gfx...` 架构字符串
+- `rocm_smi.txt` 中存在 GPU 名称、功耗或显存信息
 
 ### 5.3 查看原始数据
 
 ```bash
-# 查看 JSON 原始数据
-python -m json.tool results/benchmark_results.json
+# 查看基础实验数据
+head -n 5 results/matmul_benchmark.csv
+head -n 5 results/precision_compare.csv
+head -n 5 results/mlp_train_log.csv
+
+# 查看应用流程 transcript
+cat results/vertical_demo_transcript.csv
 ```
 
-JSON 数据结构：
-
-```json
-{
-  "metadata": {
-    "timestamp": "2026-06-01T12:00:00",
-    "python_version": "3.10.12",
-    "platform": "Linux-5.15.0-x86_64"
-  },
-  "module_tests": {
-    "loader": {
-      "pdf": {"avg_ms": 150.3, "std_ms": 12.1},
-      "txt": {"avg_ms": 5.2, "std_ms": 0.8}
-    },
-    "chunker": {
-      "sliding_window": {"avg_ms": 23.5, "std_ms": 2.1}
-    }
-  },
-  "backend_tests": {
-    "cpu": {"matmul_1000": {"avg_ms": 45.2}, "cosine_1000": {"avg_ms": 12.3}},
-    "gpu": {"status": "unavailable"},
-    "npu": {"status": "simulated"}
-  }
-}
-```
+CSV 中的 `measurement_type` / `available` / `note` 字段用于区分真实 CPU、真实 ROCm GPU、模拟后端和不可用后端。
 
 ### 5.4 查看性能图表
 
@@ -310,8 +387,8 @@ JSON 数据结构：
 
 ```bash
 # 图表已自动生成
-open results/comparison_chart.png  # macOS
-# 或: xdg-open results/comparison_chart.png  # Linux
+open figures/  # macOS
+# 或: xdg-open figures/  # Linux
 ```
 
 ---
@@ -413,15 +490,18 @@ export BENCHMARK_DOC_SIZE=50
 # 减少重复次数
 export BENCHMARK_REPEAT=3
 
-# 只运行部分测试
-python -m experiments.benchmark --test-only loader,chunker
+# 快速模式
+bash run_benchmark.sh --quick
+
+# 只运行基础实验
+bash run_benchmark.sh --basic-only
 ```
 
 ### 6.3 获取帮助
 
 如遇到其他问题：
 
-1. 检查 `results/system_info.json` 确认环境信息
+1. 检查 `results/environment_report.txt` 确认环境信息
 2. 查看详细日志：`export LOCALDOC_LOG_LEVEL=DEBUG`
 3. 参考 `docs/system_design.md` 了解系统设计细节
 4. 参考 `docs/amd_ai_max_backend.md` 了解后端配置
