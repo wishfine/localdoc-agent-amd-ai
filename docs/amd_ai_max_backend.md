@@ -432,7 +432,7 @@ cd Ryzers
 export OPENAI_API_BASE=http://localhost:1234/v1
 export OPENAI_API_KEY=lm-studio
 export LOCALDOC_USE_LLM=1
-python localdoc/app.py
+python -m localdoc.app
 ```
 
 ### 6.3 优势

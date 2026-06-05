@@ -97,4 +97,5 @@ info "启动 Gradio Web Demo ..."
 info "访问地址: http://localhost:7860"
 echo ""
 
-python "$APP_FILE"
+export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
+python -m localdoc.app
