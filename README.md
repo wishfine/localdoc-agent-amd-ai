@@ -14,51 +14,129 @@
 
 ---
 
-## 实验诚信声明
+## 运行方式（先看这里）
 
-> **本项目不伪造 AMD GPU/NPU 硬件实验结果。**
->
-> 已在 AMD/Jupyter 环境中检测到 ROCm 命令行工具和 `gfx1151` 架构，但当前运行记录显示 Python 环境尚未安装 ROCm 版 PyTorch，因此 ROCm GPU benchmark 仍未激活。此时基础实验只有 CPU baseline，Agent 的 SimulatedNPU 结果仍是 CPU 计算 + 人为延迟，不代表真实 AMD NPU/GPU 性能。
->
-> **依赖修正说明**：旧版 `requirements-llm.txt` 曾直接写入 `torch>=2.2`。在 Linux 上执行普通 `pip install torch` / `pip install -r requirements-llm.txt` 可能安装成 CUDA 版 PyTorch，这不适用于 AMD ROCm 实测。当前已把 `torch` 从通用依赖中移除，并改为通过 `bash scripts/setup_llm.sh --rocm` 或 `--cpu` 显式选择平台。
+本项目默认要接入本地 LLM。AMD 平台上按下面顺序执行即可：先安装依赖和 ROCm 版 PyTorch，再下载 Qwen3-1.7B 模型，最后一键跑完所有实验。
 
----
+### 1. 安装所有依赖并下载本地 LLM
 
-## 最新运行状态
+AMD ROCm 平台使用这一组命令：
 
-来自 AMD/Jupyter 环境的最新运行记录：
+```bash
+cd ~/localdoc-agent-amd-ai
+git pull
+rm -rf .venv
 
-| 项目 | 状态 |
-|------|------|
-| 操作系统/内核 | Linux `6.14.0-1018-oem`，32 CPU 线程，约 64 GB 内存 |
-| ROCm 命令行工具 | `rocminfo`、`rocm-smi`、`hipcc`、`hipconfig` 均可执行 |
-| GPU 架构证据 | `gfx11`、`gfx1151` |
-| PyTorch-HIP | 初始记录为未安装：`torch 已安装: False`；如果按旧依赖安装过，可能变成 CUDA 版 PyTorch，需要按下文清理重装 |
-| ROCm GPU benchmark | 未激活：`ROCm GPU available: False` |
-| 当前可作为报告证据的数据 | ROCm 环境证据、CPU baseline、完整端到端流程、模拟后端标注、能耗/资源采样 |
-| 当前不能声称的数据 | 不能声称已经获得 ROCm GPU / Ryzen AI NPU 真实加速比 |
+# 安装基础依赖、LLM 依赖、ROCm 版 PyTorch；会避免误装 CUDA 版 PyTorch
+bash scripts/setup_llm.sh --rocm
 
-要获得真正的 `ROCm_GPU` 实测行，需要在该 AMD 环境中安装匹配当前 ROCm 版本的 PyTorch-HIP，然后确认：
+# 下载本地 Qwen3-1.7B 模型到 models/qwen3-1.7b/
+bash scripts/download_llm.sh
+
+# 验证本地 LLM 能加载并生成
+python scripts/test_llm.py
+```
+
+如果 Hugging Face 下载慢，可先设置镜像后再下载：
+
+```bash
+export HF_ENDPOINT=https://hf-mirror.com
+bash scripts/download_llm.sh
+```
+
+普通 CPU 环境仅用于开发验证时，可把第一条安装命令改成：
+
+```bash
+bash scripts/setup_llm.sh --cpu
+```
+
+### 2. 一键跑完所有实验结果
+
+安装依赖和下载模型后，运行：
+
+```bash
+bash run_all_experiments.sh --allow-llm-hub
+```
+
+该命令会一次性生成所有实验结果：
+
+- 单元测试
+- 环境检查和 ROCm 原始证据
+- 矩阵乘法 benchmark
+- FP32/FP16 精度与性能对比
+- MLP 前向/反向/参数更新训练实验
+- Agent embedding / query / generation / end-to-end RAG 延迟测试
+- 企业内网政策问答端到端 transcript
+- CPU/内存/ROCm GPU 资源与能耗采样
+- 本地 Qwen3-1.7B LLM 生成 benchmark
+- extractive RAG 与 local LLM RAG 模式对比
+- 所有 CSV、PNG 图表、`results/full_experiment_run.log`、`results/experiment_manifest.txt`
+
+### 3. 启动本地 LLM Demo
+
+实验跑完后，如需截图 Web 演示页：
+
+```bash
+bash scripts/run_demo_llm.sh
+```
+
+打开平台转发的 `7860` 端口，截图上传文档、构建知识库、提问、LLM 回答和调度日志。
+
+### 4. 验证 ROCm 是否真实跑通
+
+跑完后检查：
 
 ```bash
 python - <<'PY'
 import torch
-print(torch.__version__)
-print(torch.version.hip)
-print(torch.cuda.is_available())
-print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
+print("torch:", torch.__version__)
+print("hip:", torch.version.hip)
+print("cuda:", torch.version.cuda)
+print("cuda_available:", torch.cuda.is_available())
+print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
 PY
+
+grep "ROCm_GPU" results/matmul_benchmark.csv
+grep "ROCm_GPU" results/precision_compare.csv
+grep "ROCm_GPU" results/mlp_train_log.csv
+head results/llm_generation_benchmark.csv
 ```
 
-只有当 `torch.version.hip` 非空且 `torch.cuda.is_available()` 为 `True` 时，`experiments/basic_benchmarks.py` 才会自动写入 `ROCm_GPU,measurement_type=real_rocm_gpu` 的真实 GPU 数据。
+判定规则：
 
-判断结果时按下面规则：
+| `torch.version.hip` | `torch.version.cuda` | 能否写 AMD ROCm 实测 |
+|---------------------|----------------------|----------------------|
+| 非空 | 通常为空 | 可以，CSV 应出现 `measurement_type=real_rocm_gpu` |
+| 空 | 非空 | 不可以，这是 CUDA 版 PyTorch，装错了 |
+| 空 | 空 | 不可以，只能作为 CPU baseline |
 
-| `torch.version.hip` | `torch.version.cuda` | 含义 |
-|---------------------|----------------------|------|
-| 非空 | 通常为空 | ROCm 版 PyTorch，可用于 AMD GPU 实测 |
-| 空 | 非空 | CUDA 版 PyTorch，装错了，不能作为 AMD ROCm 结果 |
-| 空 | 空 | CPU 版或未启用 GPU，只能做 CPU baseline |
+### 5. 推送实验结果
+
+确认结果正确后推送到远程仓库。不要提交 `models/`，模型文件很大，已经被 `.gitignore` 忽略。
+
+```bash
+git pull --rebase origin main
+git status --short
+
+git add \
+  results/environment_report.txt \
+  results/rocminfo.txt results/rocm_smi.txt results/hipcc_version.txt results/hipconfig_full.txt \
+  results/matmul_benchmark.csv results/precision_compare.csv results/mlp_train_log.csv \
+  results/latency_results.csv results/backend_results.csv results/resource_usage.csv \
+  results/power_trace.csv results/energy_summary.csv \
+  results/vertical_demo_transcript.csv results/llm_generation_benchmark.csv \
+  results/rag_mode_comparison.csv results/rag_stage_breakdown.csv \
+  results/full_experiment_run.log results/experiment_manifest.txt \
+  figures/matmul_benchmark.png figures/precision_compare.png figures/mlp_training_curve.png \
+  figures/energy_comparison.png figures/latency_comparison.png figures/backend_comparison.png \
+  figures/resource_usage.png figures/llm_generation_latency.png \
+  figures/rag_mode_comparison.png figures/rag_stage_breakdown.png
+
+git commit -m "Add AMD full experiment results"
+git push origin main
+```
+
+**实验诚信说明**：本项目不伪造 AMD GPU/NPU 结果。只有 CSV 中出现 `real_rocm_gpu` 或 `real_hardware` 时，报告中才写真实硬件实测；`simulated`、`unavailable`、`cpu_fallback_with_hardware_detected` 不能写成真实 AMD 加速结果。
 
 ---
 
@@ -66,8 +144,8 @@ PY
 
 | 课程要求 | 本项目对应实现 | 说明 |
 |----------|----------------|------|
-| 本地 AI 推理 | 文档问答全流程本地完成，无需联网 | 文档解析、向量检索、答案生成均在本地执行 |
-| 端到端应用 | 上传文档 -> 切块 -> 嵌入 -> 检索 -> 回答 -> 资源调度展示 | 完整 RAG Pipeline + Gradio UI |
+| 本地 AI 推理 | 文档问答全流程本地完成，无需联网 | 文档解析、向量检索、本地 Qwen3-1.7B 生成均在本机执行 |
+| 端到端应用 | 上传文档 -> 切块 -> 嵌入 -> 检索 -> 本地 LLM 回答 -> 资源调度展示 | 完整 RAG Pipeline + Gradio UI |
 | 异构资源分工 | CPU / GPU / NPU 后端抽象与调度策略 | CPU 已真实执行；ROCm 工具已能检测；GPU 实测需安装 PyTorch-HIP；NPU 仍为接口/检测层 |
 | 基础异构实验 | 矩阵乘法、FP32/FP16、MLP 训练 | 生成评分表要求的 CSV 与图表；ROCm 可用时自动加入 GPU 实测 |
 | 性能与能效 | 延迟 benchmark + CPU/内存/ROCm 功耗采样 | `resource_monitor.py` 生成 `power_trace.csv` 与 `energy_summary.csv`；有 `rocm-smi` 时采集 GPU power |
@@ -126,277 +204,24 @@ PY
 
 ---
 
-## 安装方法
-
-### 环境要求
-
-- **Python**: >= 3.9
-- **操作系统**: Linux (推荐 Ubuntu 22.04+) / macOS / Windows
-- **硬件** (可选): AMD Ryzen AI MAX+ 处理器（无此硬件时自动使用 CPU fallback 模式）
-
-### 推荐安装方式
-
-```bash
-# 1. 克隆项目（或进入已有目录）
-cd localdoc-agent-amd-ai
-
-# 2. 一键运行。脚本会自动准备 Python 环境并安装基础依赖。
-bash run_all_experiments.sh --quick
-```
-
-脚本的环境初始化逻辑：
-
-1. 优先使用 `python -m venv .venv`。
-2. 如果 Jupyter/Ubuntu 容器缺少 `ensurepip` 或 `python3-venv`，自动尝试 `pip install --user virtualenv`。
-3. 如果 `virtualenv` 也不可用，则退回当前用户 Python 环境，用 `pip install --user` 安装依赖。
-
-因此在无 sudo 的 Jupyter 容器里也可以直接运行：
-
-```bash
-git pull
-rm -rf .venv
-bash run_all_experiments.sh --quick
-```
-
-### AMD ROCm 平台依赖安装说明
-
-基础实验和默认 Demo 不需要安装 PyTorch；它们可以直接运行。如果要启用 ROCm GPU 实测或本地 LLM，必须显式安装 ROCm 版 PyTorch。
-
-不要使用这些命令安装 AMD 平台依赖：
-
-```bash
-pip install torch
-pip install "torch>=2.2"
-pip install -r requirements-llm.txt  # 旧版文件曾包含 torch；当前已修正为不含 torch
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
-```
-
-AMD ROCm 平台应使用：
-
-```bash
-# 默认使用 PyTorch ROCm 6.4 wheel 索引
-bash scripts/setup_llm.sh --rocm
-```
-
-如果你的 ROCm 版本不是 6.4，需要改用匹配版本的索引，例如：
-
-```bash
-LOCALDOC_TORCH_ROCM_INDEX_URL=https://download.pytorch.org/whl/rocm6.3 \
-  bash scripts/setup_llm.sh --rocm
-```
-
-如果已经按旧命令装成 CUDA 版 PyTorch，直接运行下面命令修正。脚本会卸载 `torch/torchvision/torchaudio`，并清理 `nvidia-*` CUDA wheel 残留依赖：
-
-```bash
-bash scripts/setup_llm.sh --rocm
-```
-
-安装后必须验证：
-
-```bash
-python - <<'PY'
-import torch
-print("torch:", torch.__version__)
-print("hip:", torch.version.hip)
-print("cuda:", torch.version.cuda)
-print("cuda_available:", torch.cuda.is_available())
-print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
-PY
-```
-
-正确的 AMD ROCm 结果应满足：`torch.version.hip` 非空，且 `torch.cuda.is_available()` 为 `True`。如果 `torch.version.cuda` 非空但 `torch.version.hip` 为空，就是 CUDA 版 PyTorch，不能写成 AMD ROCm 实测。
-
-参考官方说明时，应在 PyTorch 安装选择器中选择 `Linux + Pip + Python + ROCm`，不要选择 CUDA；AMD 官方文档也强调需选择与 Python/Ubuntu/ROCm 版本兼容的 ROCm wheel。参考链接：[PyTorch Get Started](https://pytorch.org/get-started/locally/)、[AMD ROCm PyTorch 安装文档](https://rocm.docs.amd.com/projects/radeon-ryzen/en/docs-6.4.4/docs/install/installrad/native_linux/install-pytorch.html)。
-
----
-
-## 快速开始
-
-### 运行交互式 Demo
-
-```bash
-bash run_demo.sh
-```
-
-启动 Gradio Web UI，默认访问地址：`http://localhost:7860`。脚本使用 `python -m localdoc.app` 模块方式启动，并设置项目根目录到 `PYTHONPATH`，避免在 Jupyter 容器中出现 `ModuleNotFoundError: No module named 'localdoc'`。
-
-如果是在 Jupyter/GitHub Codespace 类环境中运行，需要从平台提供的端口转发面板打开 `7860` 端口。
-
-### 运行基准测试
-
-推荐使用全量实验入口：
-
-```bash
-bash run_all_experiments.sh
-```
-
-该脚本会依次运行单元测试、环境检查、基础异构实验、Agent benchmark、垂直行业流程、可选本地 LLM benchmark、能耗采样和图表生成，并生成 `results/full_experiment_run.log` 与 `results/experiment_manifest.txt`。
-
-快速验证模式：
-
-```bash
-bash run_all_experiments.sh --quick
-```
-
-单独运行 benchmark 子流程：
-
-```bash
-bash run_benchmark.sh
-```
-
-自动执行环境检查、基础异构实验、Agent 延迟测试、资源/能耗采样、垂直行业流程复现与图表生成，结果输出到 `results/` 和 `figures/` 目录。在只有 ROCm 命令行工具、但没有 PyTorch-HIP 的环境下，ROCm GPU 行会标记为 `unavailable`；SimulatedNPU 数据会标记为 `simulated`。
-
-常用参数：
-
-```bash
-# 全量实验快速模式：测试 + benchmark + 图表 + manifest
-bash run_all_experiments.sh --quick
-
-# 跳过单元测试，适合只刷新实验结果
-bash run_all_experiments.sh --quick --skip-tests
-
-# 跳过本地 LLM benchmark，适合没有模型文件时使用
-bash run_all_experiments.sh --quick --skip-llm
-
-# 只跑基础异构实验，不跑 Agent benchmark
-bash run_all_experiments.sh --quick --basic-only
-
-# 只跑 Agent benchmark，不跑基础异构实验
-bash run_all_experiments.sh --quick --agent-only
-
-# 不启动资源/能耗监控
-bash run_all_experiments.sh --quick --no-monitor
-
-# 快速 smoke test，适合改代码后验证
-bash run_benchmark.sh --quick
-
-# 只跑评分表基础实验：matmul / FP16 / MLP
-bash run_benchmark.sh --basic-only
-
-# 只跑 Agent benchmark
-bash run_benchmark.sh --agent-only
-
-# 跳过垂直行业流程 transcript
-bash run_benchmark.sh --skip-vertical
-
-# 不启动资源/能耗监控
-bash run_benchmark.sh --no-monitor
-
-# 额外运行本地 LLM 生成 benchmark（默认只使用本地模型，不联网下载）
-bash run_benchmark.sh --with-llm
-
-# 允许 benchmark 阶段从 Hugging Face Hub 拉取模型
-bash run_benchmark.sh --allow-llm-hub
-```
-
-### 完整实验顺序
-
-正式复现实验建议按下面顺序执行。第 1 步可以在普通 CPU 环境或 AMD/Jupyter 环境运行；第 2 步只在需要 ROCm GPU 实测或本地 LLM 时执行。
-
-```bash
-# 1. 拉取最新代码并清理旧虚拟环境
-git pull
-rm -rf .venv
-
-# 2. 先跑快速全流程，确认环境、脚本、测试、图表生成都正常
-bash run_all_experiments.sh --quick
-
-# 3. AMD ROCm 平台可选：安装 ROCm 版 PyTorch，避免 CUDA 版误装
-bash scripts/setup_llm.sh --rocm
-
-# 4. 下载本地 LLM 模型。模型目录 models/ 被 .gitignore 忽略，不会推送到仓库。
-bash scripts/download_llm.sh
-
-# 5. 验证是否真的是 ROCm PyTorch
-python - <<'PY'
-import torch
-print("torch:", torch.__version__)
-print("hip:", torch.version.hip)
-print("cuda:", torch.version.cuda)
-print("cuda_available:", torch.cuda.is_available())
-print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
-PY
-
-# 6. 正式刷新全部实验数据，包含本地 LLM generation 和 RAG mode benchmark
-bash run_all_experiments.sh --allow-llm-hub
-
-# 7. 启动交互式演示，截图 Gradio 页面和问答流程
-bash run_demo.sh
-```
-
-如果第 5 步显示 `torch.version.hip` 为空，则不能写 ROCm GPU 实测；此时只能把结果描述为 AMD 平台环境检测 + CPU baseline + simulated backend。
-
-AMD 平台使用时间有限时，可以直接复制下面这组命令一次性运行。运行完成后，截图 `docs/screenshot_checklist.md` 中的必截项，再推送结果。
-
-```bash
-cd ~/localdoc-agent-amd-ai
-git pull
-rm -rf .venv
-bash scripts/setup_llm.sh --rocm
-bash scripts/download_llm.sh
-bash run_all_experiments.sh --allow-llm-hub
-```
-
-实验结果推送到远程仓库：
-
-```bash
-git status --short
-git add README.md docs/screenshot_checklist.md .gitignore \
-  results/environment_report.txt \
-  results/rocminfo.txt results/rocm_smi.txt results/hipcc_version.txt results/hipconfig_full.txt \
-  results/matmul_benchmark.csv results/precision_compare.csv results/mlp_train_log.csv \
-  results/latency_results.csv results/backend_results.csv results/resource_usage.csv \
-  results/power_trace.csv results/energy_summary.csv \
-  results/vertical_demo_transcript.csv results/llm_generation_benchmark.csv \
-  results/rag_mode_comparison.csv results/rag_stage_breakdown.csv \
-  results/full_experiment_run.log results/experiment_manifest.txt \
-  figures/matmul_benchmark.png figures/precision_compare.png figures/mlp_training_curve.png \
-  figures/energy_comparison.png figures/latency_comparison.png figures/backend_comparison.png \
-  figures/resource_usage.png figures/llm_generation_latency.png \
-  figures/rag_mode_comparison.png figures/rag_stage_breakdown.png
-git commit -m "Add AMD full experiment results"
-git push origin main
-```
-
-不要提交 `models/`，模型文件很大，已经被 `.gitignore` 忽略。
-
-### 单项程序命令总览
-
-下面是仓库中所有主要实验/演示程序的独立运行命令。一般不需要手动逐个运行；`run_all_experiments.sh` 已经统一编排了核心实验。
-
-| 程序 | 用途 | 单独运行命令 |
-|------|------|--------------|
-| `run_all_experiments.sh` | 一键全量实验：测试、环境检查、benchmark、垂直流程、资源监控、图表、manifest | `bash run_all_experiments.sh` |
-| `run_all_experiments.sh --quick` | 快速全流程 smoke test | `bash run_all_experiments.sh --quick` |
-| `run_benchmark.sh` | benchmark 子流程：环境、基础实验、Agent、资源、图表 | `bash run_benchmark.sh` |
-| `run_demo.sh` | 启动默认 Gradio 文档问答 Demo | `bash run_demo.sh` |
-| `tests/` | 单元测试 | `python -m pytest tests/ -v` |
-| `experiments/check_environment.py` | 生成环境检测和 ROCm 原始证据 | `python experiments/check_environment.py` |
-| `experiments/basic_benchmarks.py` | 基础异构实验：矩阵乘法、FP32/FP16、MLP | `python experiments/basic_benchmarks.py` |
-| `experiments/basic_benchmarks.py` quick 参数 | 快速基础实验 | `python experiments/basic_benchmarks.py --matmul-sizes 128 256 --precision-sizes 128 --repeats 2 --mlp-epochs 2 --mlp-samples 256 --batch-size 64` |
-| `experiments/benchmark_real.py` | Agent 真实/模拟后端 benchmark，自动标注 `measurement_type` | `python experiments/benchmark_real.py` |
-| `experiments/demo_vertical_workflow.py` | 企业内网政策问答端到端 transcript | `python experiments/demo_vertical_workflow.py` |
-| `experiments/resource_monitor.py` | CPU/内存/ROCm GPU 功耗采样 | `python experiments/resource_monitor.py --duration 30` |
-| `experiments/plot_basic_results.py` | 绘制基础异构实验图 | `python experiments/plot_basic_results.py` |
-| `experiments/plot_results.py` | 绘制 Agent benchmark、资源和能耗图 | `python experiments/plot_results.py` |
-| `experiments/benchmark_latency.py` | 旧版 simulated-only 延迟脚本，仅作对照，不用于真实硬件结论 | `python experiments/benchmark_latency.py` |
-| `scripts/setup_llm.sh` | 安装 LLM 通用依赖并显式选择 ROCm/CPU PyTorch | `bash scripts/setup_llm.sh --rocm` 或 `bash scripts/setup_llm.sh --cpu` |
-| `scripts/download_llm.sh` | 下载默认 Qwen3-1.7B 本地模型 | `bash scripts/download_llm.sh` |
-| `scripts/download_llm.py` | 按 preset 或 model id 下载模型 | `python scripts/download_llm.py --preset qwen3-1.7b` |
-| `scripts/test_llm.py` | 测试本地 LLM 是否可加载和生成 | `python scripts/test_llm.py` |
-| `scripts/run_demo_llm.sh` | 启动带 Qwen3-1.7B 的 Gradio Demo | `bash scripts/run_demo_llm.sh` |
-| `scripts/run_llm_benchmark.sh` | 一键运行 LLM 生成/RAG 模式 benchmark 与图表 | `bash scripts/run_llm_benchmark.sh` |
-| `experiments/benchmark_llm_generation.py` | 单独测本地 LLM 生成延迟 | `python experiments/benchmark_llm_generation.py` |
-| `experiments/benchmark_rag_modes.py` | 对比抽取式 RAG 与 LLM RAG | `python experiments/benchmark_rag_modes.py` |
-| `experiments/plot_llm_results.py` | 绘制 LLM benchmark 图 | `python experiments/plot_llm_results.py` |
-
-### 运行测试
-
-```bash
-python -m pytest tests/ -v
-```
-
-运行全部单元测试用例，验证核心模块功能正确性。
+## 命令索引（排错用）
+
+正常情况下只需要执行顶部的三条核心命令：`setup_llm.sh --rocm`、`download_llm.sh`、`run_all_experiments.sh --allow-llm-hub`。下面命令只用于单项排错。
+
+| 目标 | 命令 |
+|------|------|
+| 只做快速 smoke test | `bash run_all_experiments.sh --quick` |
+| 只跑基础实验 | `bash run_benchmark.sh --basic-only` |
+| 只跑 Agent benchmark | `bash run_benchmark.sh --agent-only` |
+| 只跑本地 LLM/RAG benchmark | `bash scripts/run_llm_benchmark.sh` |
+| 启动带本地 LLM 的 Web Demo | `bash scripts/run_demo_llm.sh` |
+| 启动抽取式 Web Demo | `bash run_demo.sh` |
+| 单独检查环境 | `python experiments/check_environment.py` |
+| 单独跑 matmul / FP16 / MLP | `python experiments/basic_benchmarks.py` |
+| 单独跑 Agent 真实/模拟 benchmark | `python experiments/benchmark_real.py` |
+| 单独跑企业内网 QA transcript | `python experiments/demo_vertical_workflow.py` |
+| 单独生成图表 | `python experiments/plot_basic_results.py && python experiments/plot_results.py && python experiments/plot_llm_results.py` |
+| 单元测试 | `python -m pytest tests/ -v` |
 
 ---
 
@@ -414,8 +239,9 @@ python -m pytest tests/ -v
 | `results/resource_usage.csv` | 系统资源使用快照 |
 | `results/power_trace.csv` / `results/energy_summary.csv` | CPU/内存/ROCm GPU 功耗采样与能耗估算 |
 | `results/vertical_demo_transcript.csv` | 企业内网政策问答端到端演示 transcript，含问题、回答、来源、分数、调度 trace |
-| `results/llm_generation_benchmark.csv` | 可选本地 LLM 生成 benchmark；模型缺失时写入 skipped 记录 |
-| `figures/*.png` | 性能对比图表 |
+| `results/llm_generation_benchmark.csv` | 本地 Qwen3-1.7B 生成 benchmark |
+| `results/rag_mode_comparison.csv` / `results/rag_stage_breakdown.csv` | extractive RAG 与 local LLM RAG 对比 |
+| `figures/*.png` | 性能、能耗、LLM 与 RAG 对比图表 |
 
 ---
 
@@ -493,7 +319,10 @@ localdoc-agent-amd-ai/
 │   ├── resource_usage.csv              # 资源使用快照
 │   ├── power_trace.csv                 # 资源/功耗采样时间序列
 │   ├── energy_summary.csv              # 能耗估算摘要
-│   └── vertical_demo_transcript.csv    # 企业内网应用流程复现记录
+│   ├── vertical_demo_transcript.csv    # 企业内网应用流程复现记录
+│   ├── llm_generation_benchmark.csv    # 本地 LLM 生成延迟
+│   ├── rag_mode_comparison.csv         # RAG 模式对比
+│   └── rag_stage_breakdown.csv         # RAG 阶段耗时分解
 │
 ├── figures/                            # 实验图表
 │   ├── latency_comparison.png          # 延迟对比图
@@ -502,7 +331,10 @@ localdoc-agent-amd-ai/
 │   ├── mlp_training_curve.png          # MLP loss/accuracy 曲线
 │   ├── backend_comparison.png          # 后端性能对比图
 │   ├── energy_comparison.png           # 资源/功耗采样图
-│   └── resource_usage.png              # 资源使用图
+│   ├── resource_usage.png              # 资源使用图
+│   ├── llm_generation_latency.png      # 本地 LLM 生成延迟图
+│   ├── rag_mode_comparison.png         # RAG 模式对比图
+│   └── rag_stage_breakdown.png         # RAG 阶段耗时分解图
 │
 ├── examples/                           # 垂直行业演示材料
 │   └── enterprise_policy/              # 企业内网政策/应急处置示例文档
@@ -519,138 +351,15 @@ localdoc-agent-amd-ai/
 
 ## 当前限制说明
 
-1. **AMD 平台已检测到 ROCm 工具，但 PyTorch-HIP 需要单独安装**：最新 AMD/Jupyter 运行记录中 `rocminfo`、`rocm-smi`、`hipcc`、`hipconfig` 可用，且检测到 `gfx1151`；初始记录里 `torch 已安装: False`。如果后续按旧依赖装成 CUDA 版 PyTorch，也仍然不能激活 ROCm GPU benchmark，必须重装 ROCm 版 PyTorch。
+1. **ROCm PyTorch 必须装对**：AMD 平台不要直接 `pip install torch`，否则可能装成 CUDA 版。必须用 `bash scripts/setup_llm.sh --rocm` 或按 PyTorch 官方选择 `Linux + Pip + Python + ROCm` 的 wheel。
 
-2. **NPU 后端仍是检测/接口层**：当前 `AMDNPUBackend` 能检测 ONNX Runtime EP，但没有真实 ONNX NPU 推理模型；即使检测到 EP，也会在 benchmark 中标记为 `cpu_fallback_with_hardware_detected`，不会标为 `real_hardware`。
+2. **NPU 仍是检测/接口层**：当前 `AMDNPUBackend` 能检测 ONNX Runtime EP，但没有真实 ONNX NPU 推理模型；即使检测到 EP，也会在 benchmark 中标记为 `cpu_fallback_with_hardware_detected`，不会标为 `real_hardware`。
 
-3. **TF-IDF 嵌入（非神经网络）**：当前向量嵌入模块使用 TF-IDF，而非神经网络嵌入模型。在真实 AMD GPU/NPU 环境下可替换为 Dense Embedding 模型以利用硬件加速。
+3. **Embedding 仍使用 TF-IDF**：文档嵌入和检索保持轻量实现；本地 LLM 主要用于答案生成与 RAG 模式对比。
 
-4. **模板式答案生成**：当前答案生成模块采用抽取式/模板式策略，未接入大语言模型。在真实硬件平台上可接入 Qwen3.5 4B 等模型实现神经网络生成。
+4. **LLM 模型不进仓库**：`models/` 被 `.gitignore` 忽略。实验结果 CSV、PNG、log 和 manifest 可以提交，模型权重不要提交。
 
-5. **文档格式有限**：当前支持 PDF、TXT、Markdown 三种格式，其他格式（如 DOCX、HTML）需扩展 Loader 模块。
-
----
-
-## 后续：启用 ROCm GPU 实测
-
-AMD 平台已经能运行 ROCm 工具链。下一步不是“找硬件”，而是在 Python 环境中安装匹配 ROCm 版本的 PyTorch-HIP。
-
-### 第一步：保留当前 ROCm 环境证据
-
-```bash
-bash run_all_experiments.sh --quick
-```
-
-截图和保存以下文件：
-
-- `results/environment_report.txt`
-- `results/rocminfo.txt`
-- `results/rocm_smi.txt`
-- `results/hipcc_version.txt`
-- `results/hipconfig_full.txt`
-
-### 第二步：安装 ROCm 版 PyTorch
-
-先不要直接 `pip install torch`。本项目的安全入口是：
-
-```bash
-bash scripts/setup_llm.sh --rocm
-```
-
-该脚本会使用 ROCm PyTorch wheel 索引，并在安装前卸载可能误装的 CUDA 版 torch。默认索引为 `https://download.pytorch.org/whl/rocm6.4`；如 AMD/Jupyter 环境的 ROCm 版本不同，用 `LOCALDOC_TORCH_ROCM_INDEX_URL` 指定匹配版本。
-
-也可以根据 [PyTorch 官方安装页](https://pytorch.org/get-started/locally/) 或 [AMD ROCm PyTorch 安装文档](https://rocm.docs.amd.com/projects/radeon-ryzen/en/docs-6.4.4/docs/install/installrad/native_linux/install-pytorch.html) 选择与当前 ROCm、Python、Ubuntu 版本匹配的安装命令。安装后必须验证：
-
-```bash
-source .venv/bin/activate
-python - <<'PY'
-import torch
-print("torch:", torch.__version__)
-print("hip:", torch.version.hip)
-print("cuda:", torch.version.cuda)
-print("cuda_available:", torch.cuda.is_available())
-print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
-PY
-```
-
-### 第三步：重新跑完整实验
-
-```bash
-bash run_all_experiments.sh --quick
-# 或正式数据：
-bash run_all_experiments.sh
-```
-
-预期变化：
-
-- `results/environment_report.txt` 中 `torch.version.hip` 非空。
-- `torch.cuda.is_available()` 为 `True`。
-- `torch.version.cuda` 不应作为 AMD 证据；如果 `torch.version.cuda` 非空但 `torch.version.hip` 为空，说明装成 CUDA 版。
-- `results/matmul_benchmark.csv`、`results/precision_compare.csv`、`results/mlp_train_log.csv` 出现 `ROCm_GPU` 且 `measurement_type=real_rocm_gpu`。
-- `figures/matmul_benchmark.png`、`figures/precision_compare.png`、`figures/mlp_training_curve.png` 中出现 ROCm GPU 曲线或柱状对比。
-
-### 第四步：更新实验报告
-
-只有当 CSV 中出现 `real_rocm_gpu` 或 `real_hardware` 后，报告中才能写“ROCm GPU 实测”。如果仍是 `unavailable` / `simulated`，报告只能写“AMD 平台环境检测 + CPU baseline + simulated backend”。
-
-### 第五步：接入 Qwen3-1.7B 本地 LLM（可选）
-
-在真实 AMD 平台上，有多种方式运行本地 LLM：
-
-1. **Lemonade 推理框架**（推荐）：AMD 官方推理框架，内置 NPU 调度，提供 OpenAI 兼容 API。
-   - 安装：`pip install lemonade-sdk`
-   - AMD 官方适配模型：https://huggingface.co/amd
-
-2. **LM Studio + ROCm**：使用 LM Studio 加载量化模型，通过 ROCm GPU 加速推理。
-   - 下载：https://lmstudio.ai/
-
-3. **Ryzers Docker 容器**：AMD Research 提供的预配置容器，覆盖 LLM/NPU/视觉等场景。
-   - 仓库：https://github.com/AMDResearch/Ryzers
-
-4. **直接使用 Transformers + ROCm PyTorch**：当前 `local_llm_backend.py` 已支持自动检测 ROCm GPU。
-
----
-
-## 可选：接入本地小语言模型
-
-默认版本不加载 LLM，保证普通 CPU 环境可运行。如果需要展示**本地 AI 推理**能力，可以启用 Qwen3-1.7B 作为生成后端。
-
-### 启用步骤
-
-```bash
-# 1. 安装 LLM 依赖
-# AMD ROCm 平台：
-bash scripts/setup_llm.sh --rocm
-
-# 普通 CPU 环境：
-# bash scripts/setup_llm.sh --cpu
-
-# 2. 下载模型（约 1GB，从 Hugging Face）
-bash scripts/download_llm.sh
-
-# 3. 测试模型
-python scripts/test_llm.py
-
-# 4. 启动带 LLM 的 Demo
-bash scripts/run_demo_llm.sh
-
-# 5. 运行 LLM Benchmark（可选）
-bash scripts/run_llm_benchmark.sh
-```
-
-### 说明
-
-- 本项目使用 **Qwen3-1.7B** 作为可选本地 LLM 后端。
-- `requirements-llm.txt` 不再包含 `torch`，避免在 AMD 平台误装 CUDA 版 PyTorch。
-- AMD 平台必须用 `bash scripts/setup_llm.sh --rocm` 安装 ROCm 版 PyTorch；普通 `pip install torch` 不可作为 AMD 实测依赖安装方式。
-- 默认不加载 LLM，设置 `LOCALDOC_USE_LLM=1` 才启用。
-- Qwen3-1.7B 用于展示本地生成式 AI 推理能力。
-- 关闭 thinking mode（`enable_thinking=False`）以保证演示稳定快速。
-- 该 LLM **完全本地运行**，不调用任何云端 API。
-- Embedding 仍使用 TF-IDF（CPUBackend），LLM 仅替换答案生成环节。
-- 如果没有真实 AMD ROCm/NPU 环境，则该实验**不是** AMD GPU/NPU 加速实验。
-- 模型可从 `Qwen/Qwen3-1.7B`（Hugging Face）下载，Apache-2.0 许可证。
-- 详细说明见 [docs/local_llm_setup.md](docs/local_llm_setup.md)。
+5. **真实/模拟必须区分**：只有 CSV 中出现 `real_rocm_gpu` 或 `real_hardware` 后，报告中才写真实硬件实测；`simulated`、`unavailable`、`cpu_fallback_with_hardware_detected` 不能写成真实 AMD 加速。
 
 ---
 
