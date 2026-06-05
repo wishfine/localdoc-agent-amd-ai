@@ -249,11 +249,38 @@ bash run_benchmark.sh
 常用参数：
 
 ```bash
+# 全量实验快速模式：测试 + benchmark + 图表 + manifest
+bash run_all_experiments.sh --quick
+
+# 跳过单元测试，适合只刷新实验结果
+bash run_all_experiments.sh --quick --skip-tests
+
+# 跳过本地 LLM benchmark，适合没有模型文件时使用
+bash run_all_experiments.sh --quick --skip-llm
+
+# 只跑基础异构实验，不跑 Agent benchmark
+bash run_all_experiments.sh --quick --basic-only
+
+# 只跑 Agent benchmark，不跑基础异构实验
+bash run_all_experiments.sh --quick --agent-only
+
+# 不启动资源/能耗监控
+bash run_all_experiments.sh --quick --no-monitor
+
 # 快速 smoke test，适合改代码后验证
 bash run_benchmark.sh --quick
 
 # 只跑评分表基础实验：matmul / FP16 / MLP
 bash run_benchmark.sh --basic-only
+
+# 只跑 Agent benchmark
+bash run_benchmark.sh --agent-only
+
+# 跳过垂直行业流程 transcript
+bash run_benchmark.sh --skip-vertical
+
+# 不启动资源/能耗监控
+bash run_benchmark.sh --no-monitor
 
 # 额外运行本地 LLM 生成 benchmark（默认只使用本地模型，不联网下载）
 bash run_benchmark.sh --with-llm
@@ -261,6 +288,70 @@ bash run_benchmark.sh --with-llm
 # 允许 benchmark 阶段从 Hugging Face Hub 拉取模型
 bash run_benchmark.sh --allow-llm-hub
 ```
+
+### 完整实验顺序
+
+正式复现实验建议按下面顺序执行。第 1 步可以在普通 CPU 环境或 AMD/Jupyter 环境运行；第 2 步只在需要 ROCm GPU 实测或本地 LLM 时执行。
+
+```bash
+# 1. 拉取最新代码并清理旧虚拟环境
+git pull
+rm -rf .venv
+
+# 2. 先跑快速全流程，确认环境、脚本、测试、图表生成都正常
+bash run_all_experiments.sh --quick
+
+# 3. AMD ROCm 平台可选：安装 ROCm 版 PyTorch，避免 CUDA 版误装
+bash scripts/setup_llm.sh --rocm
+
+# 4. 验证是否真的是 ROCm PyTorch
+python - <<'PY'
+import torch
+print("torch:", torch.__version__)
+print("hip:", torch.version.hip)
+print("cuda:", torch.version.cuda)
+print("cuda_available:", torch.cuda.is_available())
+print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
+PY
+
+# 5. 正式刷新全部实验数据
+bash run_all_experiments.sh
+
+# 6. 启动交互式演示，截图 Gradio 页面和问答流程
+bash run_demo.sh
+```
+
+如果第 4 步显示 `torch.version.hip` 为空，则不能写 ROCm GPU 实测；此时只能把结果描述为 AMD 平台环境检测 + CPU baseline + simulated backend。
+
+### 单项程序命令总览
+
+下面是仓库中所有主要实验/演示程序的独立运行命令。一般不需要手动逐个运行；`run_all_experiments.sh` 已经统一编排了核心实验。
+
+| 程序 | 用途 | 单独运行命令 |
+|------|------|--------------|
+| `run_all_experiments.sh` | 一键全量实验：测试、环境检查、benchmark、垂直流程、资源监控、图表、manifest | `bash run_all_experiments.sh` |
+| `run_all_experiments.sh --quick` | 快速全流程 smoke test | `bash run_all_experiments.sh --quick` |
+| `run_benchmark.sh` | benchmark 子流程：环境、基础实验、Agent、资源、图表 | `bash run_benchmark.sh` |
+| `run_demo.sh` | 启动默认 Gradio 文档问答 Demo | `bash run_demo.sh` |
+| `tests/` | 单元测试 | `python -m pytest tests/ -v` |
+| `experiments/check_environment.py` | 生成环境检测和 ROCm 原始证据 | `python experiments/check_environment.py` |
+| `experiments/basic_benchmarks.py` | 基础异构实验：矩阵乘法、FP32/FP16、MLP | `python experiments/basic_benchmarks.py` |
+| `experiments/basic_benchmarks.py` quick 参数 | 快速基础实验 | `python experiments/basic_benchmarks.py --matmul-sizes 128 256 --precision-sizes 128 --repeats 2 --mlp-epochs 2 --mlp-samples 256 --batch-size 64` |
+| `experiments/benchmark_real.py` | Agent 真实/模拟后端 benchmark，自动标注 `measurement_type` | `python experiments/benchmark_real.py` |
+| `experiments/demo_vertical_workflow.py` | 企业内网政策问答端到端 transcript | `python experiments/demo_vertical_workflow.py` |
+| `experiments/resource_monitor.py` | CPU/内存/ROCm GPU 功耗采样 | `python experiments/resource_monitor.py --duration 30` |
+| `experiments/plot_basic_results.py` | 绘制基础异构实验图 | `python experiments/plot_basic_results.py` |
+| `experiments/plot_results.py` | 绘制 Agent benchmark、资源和能耗图 | `python experiments/plot_results.py` |
+| `experiments/benchmark_latency.py` | 旧版 simulated-only 延迟脚本，仅作对照，不用于真实硬件结论 | `python experiments/benchmark_latency.py` |
+| `scripts/setup_llm.sh` | 安装 LLM 通用依赖并显式选择 ROCm/CPU PyTorch | `bash scripts/setup_llm.sh --rocm` 或 `bash scripts/setup_llm.sh --cpu` |
+| `scripts/download_llm.sh` | 下载默认 Qwen3-1.7B 本地模型 | `bash scripts/download_llm.sh` |
+| `scripts/download_llm.py` | 按 preset 或 model id 下载模型 | `python scripts/download_llm.py --preset qwen3-1.7b` |
+| `scripts/test_llm.py` | 测试本地 LLM 是否可加载和生成 | `python scripts/test_llm.py` |
+| `scripts/run_demo_llm.sh` | 启动带 Qwen3-1.7B 的 Gradio Demo | `bash scripts/run_demo_llm.sh` |
+| `scripts/run_llm_benchmark.sh` | 一键运行 LLM 生成/RAG 模式 benchmark 与图表 | `bash scripts/run_llm_benchmark.sh` |
+| `experiments/benchmark_llm_generation.py` | 单独测本地 LLM 生成延迟 | `python experiments/benchmark_llm_generation.py` |
+| `experiments/benchmark_rag_modes.py` | 对比抽取式 RAG 与 LLM RAG | `python experiments/benchmark_rag_modes.py` |
+| `experiments/plot_llm_results.py` | 绘制 LLM benchmark 图 | `python experiments/plot_llm_results.py` |
 
 ### 运行测试
 
