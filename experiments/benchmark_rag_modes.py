@@ -10,6 +10,8 @@ Output:
 """
 
 import csv
+import argparse
+import os
 import sys
 import tempfile
 import time
@@ -121,7 +123,24 @@ def run_llm_mode():
     }
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Compare extractive RAG and local LLM RAG")
+    parser.add_argument("--results-dir", type=str, default=str(RESULTS_DIR))
+    parser.add_argument(
+        "--require-gpu",
+        action="store_true",
+        help="Fail local LLM mode instead of falling back to CPU when Qwen cannot run on GPU.",
+    )
+    return parser.parse_args()
+
+
 def main():
+    global RESULTS_DIR
+    args = parse_args()
+    RESULTS_DIR = Path(args.results_dir)
+    if args.require_gpu:
+        os.environ["LOCALDOC_REQUIRE_LLM_GPU"] = "1"
+
     print("=" * 60)
     print("  RAG Mode Comparison Benchmark")
     print("  ⚠️ Local LLM inference, NOT AMD hardware benchmark")

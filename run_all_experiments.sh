@@ -40,6 +40,11 @@ while [ $# -gt 0 ]; do
             ALLOW_LLM_HUB=1
             shift
             ;;
+        --require-llm-gpu)
+            RUN_LLM=1
+            BENCH_ARGS+=("--require-llm-gpu")
+            shift
+            ;;
         --no-monitor|--basic-only|--agent-only|--skip-vertical)
             BENCH_ARGS+=("$1")
             shift

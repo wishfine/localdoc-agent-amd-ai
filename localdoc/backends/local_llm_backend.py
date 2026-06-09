@@ -25,6 +25,10 @@ from localdoc.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
+def _truthy_env(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 class LocalLLMBackend:
     """
     Local LLM generation backend using Qwen3-1.7B.
@@ -42,6 +46,7 @@ class LocalLLMBackend:
     - LOCALDOC_LLM_MODEL_ID: Hugging Face model ID (fallback if local path not found)
     - LOCALDOC_LLM_MAX_NEW_TOKENS: max generation tokens (default 128)
     - LOCALDOC_LLM_CONTEXT_CHARS: max context characters (default 1600)
+    - LOCALDOC_REQUIRE_LLM_GPU=1: fail fast if generation cannot run on GPU
     """
 
     def __init__(
@@ -64,6 +69,7 @@ class LocalLLMBackend:
         self.context_chars = int(
             os.getenv("LOCALDOC_LLM_CONTEXT_CHARS", str(context_chars))
         )
+        self.require_gpu = _truthy_env("LOCALDOC_REQUIRE_LLM_GPU")
 
         self._cpu_backend = CPUBackend()
         self._torch = None
@@ -134,6 +140,12 @@ class LocalLLMBackend:
             if hip_version and torch.cuda.is_available():
                 probe_ok, probe_note = rocm_tensor_probe()
                 if not probe_ok:
+                    if self.require_gpu:
+                        raise RuntimeError(
+                            "LOCALDOC_REQUIRE_LLM_GPU=1 but ROCm tensor probe failed. "
+                            "Qwen will not be loaded on CPU fallback. "
+                            f"Probe detail: {probe_note}"
+                        )
                     self._device = "cpu"
                     torch_dtype = torch.float32
                     logger.warning(
@@ -153,6 +165,12 @@ class LocalLLMBackend:
                 torch_dtype = torch.float16
                 logger.info("Using CUDA GPU (CUDA %s) for LLM inference", cuda_version)
             else:
+                if self.require_gpu:
+                    raise RuntimeError(
+                        "LOCALDOC_REQUIRE_LLM_GPU=1 but no usable GPU runtime was detected. "
+                        f"torch.version.hip={hip_version}, torch.version.cuda={cuda_version}, "
+                        f"torch.cuda.is_available()={torch.cuda.is_available()}"
+                    )
                 self._device = "cpu"
                 torch_dtype = torch.float32
                 logger.info("Using CPU for LLM inference (no GPU detected)")

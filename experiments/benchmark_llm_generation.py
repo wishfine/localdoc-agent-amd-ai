@@ -9,6 +9,7 @@ Output: results/llm_generation_benchmark.csv
 
 import csv
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -57,11 +58,19 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Allow loading model_id from Hugging Face Hub when model-dir is missing.",
     )
+    parser.add_argument(
+        "--require-gpu",
+        action="store_true",
+        help="Fail instead of falling back to CPU when Qwen cannot run on GPU.",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    if args.require_gpu:
+        os.environ["LOCALDOC_REQUIRE_LLM_GPU"] = "1"
+
     model_dir = Path(args.model_dir)
     results_dir = Path(args.results_dir)
 

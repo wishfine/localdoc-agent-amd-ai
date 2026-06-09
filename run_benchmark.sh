@@ -88,9 +88,11 @@ RUN_AGENT=1
 RUN_VERTICAL=1
 RUN_LLM=0
 RUN_MONITOR=1
+REQUIRE_LLM_GPU=0
 BASIC_ARGS=""
 AGENT_ARGS=""
 LLM_ARGS=""
+RAG_ARGS=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -116,6 +118,14 @@ while [ $# -gt 0 ]; do
         --allow-llm-hub)
             RUN_LLM=1
             LLM_ARGS="$LLM_ARGS --allow-hub"
+            shift
+            ;;
+        --require-llm-gpu)
+            RUN_LLM=1
+            REQUIRE_LLM_GPU=1
+            LLM_ARGS="$LLM_ARGS --require-gpu"
+            RAG_ARGS="$RAG_ARGS --require-gpu"
+            export LOCALDOC_REQUIRE_LLM_GPU=1
             shift
             ;;
         --skip-vertical)
@@ -265,12 +275,21 @@ if [ "$RUN_LLM" -eq 1 ]; then
         --results-dir "$SCRIPT_DIR/results" $LLM_ARGS; then
         info "本地 LLM benchmark 完成。"
     else
+        if [ "$REQUIRE_LLM_GPU" -eq 1 ]; then
+            error "本地 LLM 未能在 GPU 上运行；--require-llm-gpu 已要求失败退出。"
+            exit 1
+        fi
         warn "本地 LLM benchmark 失败或模型未准备好，继续执行。"
     fi
 
-    if python "$SCRIPT_DIR/experiments/benchmark_rag_modes.py"; then
+    if python "$SCRIPT_DIR/experiments/benchmark_rag_modes.py" \
+        --results-dir "$SCRIPT_DIR/results" $RAG_ARGS; then
         info "RAG 模式对比 benchmark 完成。"
     else
+        if [ "$REQUIRE_LLM_GPU" -eq 1 ]; then
+            error "本地 LLM RAG 未能在 GPU 上运行；--require-llm-gpu 已要求失败退出。"
+            exit 1
+        fi
         warn "RAG 模式对比失败或模型未准备好，继续执行。"
     fi
 else

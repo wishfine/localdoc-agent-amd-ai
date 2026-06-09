@@ -36,8 +36,8 @@ bash scripts/download_llm.sh
 # 修复/验证常见 ROCm runtime 路径问题，特别是缺失 /opt/amdgpu/share/libdrm/amdgpu.ids
 bash scripts/repair_rocm_runtime.sh
 
-# 验证本地 LLM 能加载并生成
-python scripts/test_llm.py
+# 验证本地 LLM 必须加载到 ROCm GPU；如果回落 CPU 会直接失败
+python scripts/test_llm.py --require-gpu
 ```
 
 如果 Hugging Face 下载慢，可先设置镜像后再下载：
@@ -58,7 +58,7 @@ bash scripts/setup_llm.sh --cpu
 安装依赖和下载模型后，运行：
 
 ```bash
-bash run_all_experiments.sh --allow-llm-hub
+bash run_all_experiments.sh --allow-llm-hub --require-llm-gpu
 ```
 
 该命令会一次性生成所有实验结果：
@@ -72,7 +72,7 @@ bash run_all_experiments.sh --allow-llm-hub
 - Agent embedding / query / generation / end-to-end RAG 延迟测试
 - 企业内网政策问答端到端 transcript
 - CPU/内存/ROCm GPU 资源与能耗采样
-- 本地 Qwen3-1.7B LLM 生成 benchmark
+- 本地 Qwen3-1.7B LLM 生成 benchmark（`--require-llm-gpu` 时必须跑在 GPU 上）
 - extractive RAG 与 local LLM RAG 模式对比
 - ROCm 工具汇总表 `results/rocm_tools_summary.csv` 与调优记录 `results/rocm_tuning_recommendations.md`
 - 所有 CSV、PNG 图表、`results/full_experiment_run.log`、`results/experiment_manifest.txt`
@@ -82,7 +82,7 @@ bash run_all_experiments.sh --allow-llm-hub
 实验跑完后，如需截图 Web 演示页：
 
 ```bash
-bash scripts/run_demo_llm.sh
+bash scripts/run_demo_llm.sh --require-gpu
 ```
 
 打开平台转发的 `7860` 端口，截图上传文档、构建知识库、提问、LLM 回答和调度日志。
@@ -228,6 +228,7 @@ git push origin main
 
 - `AMD Radeon 8060S` 是 Ryzen AI MAX+ 平台内置的 Radeon GPU，不是 CPU，也不是 XDNA NPU。
 - `ROCm tensor probe ok: True` 只证明 8060S GPU 的 ROCm/PyTorch tensor 计算能跑通；它不会让 NPU 可用。
+- 当前实验环境只看到 `Radeon 8060S / gfx1151` 时，按 CPU + ROCm GPU 实测处理；没有 NPU EP 证据就不启用 NPU。
 - 真实 NPU 推理需要 ONNX Runtime 中出现 `VitisAIExecutionProvider`、`RyzenAIExecutionProvider` 或可用的 Windows/厂商 NPU EP，并且需要能被该 EP 编译/执行的 ONNX/OGA 模型。
 - 如果日志显示 `onnxruntime not installed` 或 `available_providers` 中没有 NPU EP，就不能把 NPU 写成真实实测，只能写 `unavailable` 或接口预留。
 
@@ -243,7 +244,8 @@ git push origin main
 | 只跑基础实验 | `bash run_benchmark.sh --basic-only` |
 | 只跑 Agent benchmark | `bash run_benchmark.sh --agent-only` |
 | 只跑本地 LLM/RAG benchmark | `bash scripts/run_llm_benchmark.sh` |
-| 启动带本地 LLM 的 Web Demo | `bash scripts/run_demo_llm.sh` |
+| 强制本地 LLM 跑 GPU | `bash scripts/run_llm_benchmark.sh --require-gpu` |
+| 启动带本地 LLM 的 Web Demo | `bash scripts/run_demo_llm.sh --require-gpu` |
 | 启动抽取式 Web Demo | `bash run_demo.sh` |
 | 修复/验证 ROCm tensor probe | `bash scripts/repair_rocm_runtime.sh && python experiments/check_environment.py` |
 | 单独检查环境 | `python experiments/check_environment.py` |
@@ -406,6 +408,8 @@ localdoc-agent-amd-ai/
 2. **NPU 仍是检测/接口层**：当前 `AMDNPUBackend` 能检测 ONNX Runtime EP，但没有真实 ONNX NPU 推理模型；即使检测到 EP，也会在 benchmark 中标记为 `cpu_fallback_with_hardware_detected`，不会标为 `real_hardware`。
 
    需要真实 NPU 时，必须先在系统层安装 Ryzen AI / VitisAI / ONNX Runtime NPU EP，并准备可在 NPU 上编译执行的 ONNX/OGA 模型。PyTorch ROCm 只能覆盖 Radeon GPU 路径，不能直接把 Qwen3-1.7B 切到 XDNA NPU。
+
+   如果当前环境只暴露 `AMD Radeon 8060S (gfx1151)`，就按 GPU 实测路线完成课程实验；NPU 不参与结果。
 
 3. **Embedding 仍使用 TF-IDF**：文档嵌入和检索保持轻量实现；本地 LLM 主要用于答案生成与 RAG 模式对比。
 

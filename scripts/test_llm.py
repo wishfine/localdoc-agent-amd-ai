@@ -1,23 +1,45 @@
 """
 Test local LLM backend with a sample query.
 
-Run: python scripts/test_llm.py
+Run:
+  python scripts/test_llm.py
+  python scripts/test_llm.py --require-gpu
 """
 
+import argparse
+import os
+import sys
 import time
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from localdoc.backends.local_llm_backend import LocalLLMBackend
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_DIR = PROJECT_ROOT / "models" / "qwen3-1.7b"
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Test Qwen3-1.7B local LLM backend")
+    parser.add_argument(
+        "--require-gpu",
+        action="store_true",
+        help="Fail instead of falling back to CPU when Qwen cannot run on GPU.",
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    if args.require_gpu:
+        os.environ["LOCALDOC_REQUIRE_LLM_GPU"] = "1"
+
     print("=" * 60)
     print("LocalDoc Agent - Test Local LLM")
     print(f"Model: Qwen3-1.7B")
     print(f"Model path: {MODEL_DIR}")
+    print(f"Require GPU: {args.require_gpu}")
     print("=" * 60)
 
     backend = LocalLLMBackend(
@@ -29,9 +51,10 @@ def main():
     info = backend.get_device_info()
     print(f"后端名称: {backend.name}")
     print(f"模型本地可用: {backend.is_available()}")
-    print(f"推理设备: {info['device']}")
+    print(f"加载前设备状态: {info['device']}")
     print(f"torch.cuda.is_available(): {info['torch_cuda_available']}")
     print(f"torch.version.hip: {info['torch_hip_version']}")
+    print(f"ROCm tensor probe ok: {info.get('rocm_tensor_probe_ok')}")
     print(f"硬件说明: {info['hardware_note']}")
 
     query = "请用三句话解释什么是异构计算。"
@@ -48,17 +71,19 @@ def main():
     start = time.perf_counter()
     answer = backend.generate_answer(query=query, context=context)
     elapsed = time.perf_counter() - start
+    info_after = backend.get_device_info()
 
     print("\n回答:")
     print("-" * 40)
     print(answer)
     print("-" * 40)
     print(f"\n耗时: {elapsed:.2f}s")
-    print(f"设备: {info['device']}")
+    print(f"实际推理设备: {info_after['device']}")
+    print(f"ROCm tensor probe ok: {info_after.get('rocm_tensor_probe_ok')}")
 
-    if info["device"] == "cpu":
+    if info_after["device"] == "cpu":
         print("\n⚠️ 当前在 CPU 上运行 Qwen3-1.7B 推理，不是 GPU/NPU 实测。")
-    if not info["torch_hip_version"]:
+    if not info_after["torch_hip_version"]:
         print("⚠️ 未检测到 AMD ROCm (torch.version.hip 为空)，不代表 AMD GPU 实测。")
 
 
