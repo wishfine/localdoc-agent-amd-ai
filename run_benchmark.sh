@@ -160,10 +160,29 @@ else
     warn "环境检查脚本出错，继续执行后续步骤。"
 fi
 
-# ====== 第 2 步: 基础实验 ======
+# ====== 第 2 步: ROCm 工具性能检测 ======
 echo ""
 echo "============================================"
-echo "  第 2 步: 基础异构实验"
+echo "  第 2 步: ROCm 工具性能检测与调优证据"
+echo "============================================"
+echo ""
+
+info "采集 AMD SMI / ROCm SMI / Bandwidth Test / ROCProfiler 工具证据 ..."
+info "缺失的工具会写入 CSV 和 TXT，不会伪装成真实检测结果"
+echo ""
+
+if python "$SCRIPT_DIR/experiments/rocm_tools_profile.py" \
+    --results-dir "$SCRIPT_DIR/results" \
+    --python "$(command -v python)"; then
+    info "ROCm 工具证据采集完成。"
+else
+    warn "ROCm 工具证据采集失败，继续执行后续实验。"
+fi
+
+# ====== 第 3 步: 基础实验 ======
+echo ""
+echo "============================================"
+echo "  第 3 步: 基础异构实验"
 echo "============================================"
 echo ""
 
@@ -182,10 +201,10 @@ else
     warn "跳过基础实验 (--agent-only)"
 fi
 
-# ====== 第 3 步: 延迟基准测试 ======
+# ====== 第 4 步: 延迟基准测试 ======
 echo ""
 echo "============================================"
-echo "  第 3 步: Agent 延迟基准测试 (自动检测硬件)"
+echo "  第 4 步: Agent 延迟基准测试 (自动检测硬件)"
 echo "============================================"
 echo ""
 
@@ -206,10 +225,10 @@ else
     warn "跳过 Agent benchmark (--basic-only)"
 fi
 
-# ====== 第 4 步: 垂直行业 Demo ======
+# ====== 第 5 步: 垂直行业 Demo ======
 echo ""
 echo "============================================"
-echo "  第 4 步: 垂直行业应用流程"
+echo "  第 5 步: 垂直行业应用流程"
 echo "============================================"
 echo ""
 
@@ -224,10 +243,10 @@ else
     warn "跳过垂直行业应用流程"
 fi
 
-# ====== 第 5 步: 可选本地 LLM Benchmark ======
+# ====== 第 6 步: 可选本地 LLM Benchmark ======
 echo ""
 echo "============================================"
-echo "  第 5 步: 本地 LLM Benchmark (可选)"
+echo "  第 6 步: 本地 LLM Benchmark (可选)"
 echo "============================================"
 echo ""
 
@@ -251,10 +270,10 @@ fi
 # 停止能效监控，确保 power_trace.csv 可供绘图读取。
 cleanup_monitor
 
-# ====== 第 6 步: 生成图表 ======
+# ====== 第 7 步: 生成图表 ======
 echo ""
 echo "============================================"
-echo "  第 6 步: 生成结果图表"
+echo "  第 7 步: 生成结果图表"
 echo "============================================"
 echo ""
 
@@ -304,6 +323,13 @@ for csv in matmul_benchmark.csv precision_compare.csv mlp_train_log.csv latency_
     if [ -f "$SCRIPT_DIR/results/$csv" ]; then
         LINES=$(wc -l < "$SCRIPT_DIR/results/$csv")
         echo "  📊 results/$csv  ($LINES 行)"
+    fi
+done
+
+for file in rocm_tools_summary.csv rocm_tuning_recommendations.md amd_smi_list.txt amd_smi_static.txt amd_smi_metric.txt rocm_smi_performance.txt rocm_bandwidth_test.txt rocprofiler_tools.txt rocprofiler_run.txt; do
+    if [ -f "$SCRIPT_DIR/results/$file" ]; then
+        SIZE=$(du -h "$SCRIPT_DIR/results/$file" | cut -f1)
+        echo "  🔧 results/$file  ($SIZE)"
     fi
 done
 

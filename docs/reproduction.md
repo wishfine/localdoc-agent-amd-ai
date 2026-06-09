@@ -195,36 +195,33 @@ print(answer)
 推荐优先运行：
 
 ```bash
-bash run_all_experiments.sh
+bash run_all_experiments.sh --allow-llm-hub
 ```
 
 该脚本会自动完成：
 
 1. 单元测试。
 2. 环境检查与 ROCm 原始证据采集。
-3. 矩阵乘法、FP32/FP16、MLP 基础实验。
-4. Agent embedding / query / generation / e2e RAG benchmark。
-5. 垂直行业企业内网政策问答 transcript。
-6. 资源与能效采样。
-7. 可选本地 LLM benchmark（无本地模型时写入 skipped，不联网下载）。
-8. 图表生成、运行日志和实验 manifest。
+3. ROCm 官方工具性能检测：AMD SMI、ROCm SMI、Bandwidth Test、rocprofv3/ROCProfiler。
+4. 矩阵乘法、FP32/FP16、MLP 基础实验。
+5. Agent embedding / query / generation / e2e RAG benchmark。
+6. 垂直行业企业内网政策问答 transcript。
+7. 资源与能效采样。
+8. 本地 LLM benchmark 与 RAG 模式对比。
+9. 图表生成、运行日志和实验 manifest。
 
 输出文件：
 
 - `results/full_experiment_run.log`
 - `results/experiment_manifest.txt`
+- `results/rocm_tools_summary.csv`
+- `results/rocm_tuning_recommendations.md`
 - `docs/screenshot_checklist.md`
 
 快速验证可运行：
 
 ```bash
 bash run_all_experiments.sh --quick
-```
-
-在 AMD 真机上如需允许脚本自动从 Hugging Face Hub 拉取 LLM 模型：
-
-```bash
-bash run_all_experiments.sh --allow-llm-hub
 ```
 
 ### 4.2 执行 benchmark 子流程
@@ -241,12 +238,19 @@ bash run_benchmark.sh
    - ONNX Runtime providers、Ryzen AI / VitisAI EP 状态
    - `rocminfo`、`rocm-smi`、`hipcc --version`、`hipconfig --full` 原始输出
 
-2. **基础异构实验**：
+2. **ROCm 工具性能检测与调优证据**：
+   - AMD SMI：GPU 列表、静态信息、功耗/温度/利用率/显存指标
+   - ROCm SMI：兼容旧环境的 GPU power、clock、VRAM、temperature、utilization
+   - ROCm Bandwidth Test：CPU-GPU/GPU-GPU 数据传输带宽
+   - rocprofv3/ROCProfiler：profiler 可用性与小型 ROCm PyTorch probe
+   - 输出 `results/rocm_tools_summary.csv`、`results/rocm_tuning_recommendations.md`
+
+3. **基础异构实验**：
    - 矩阵乘法 benchmark，输出 `results/matmul_benchmark.csv`
    - FP32/FP16 精度对比，输出 `results/precision_compare.csv`
    - MLP 单卡训练日志，输出 `results/mlp_train_log.csv`
 
-3. **Agent 应用基准测试**：
+4. **Agent 应用基准测试**：
    - Embedding benchmark
    - Query embedding benchmark
    - Generation benchmark

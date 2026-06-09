@@ -135,6 +135,15 @@ MANIFEST="$SCRIPT_DIR/results/experiment_manifest.txt"
         results/rocm_smi.txt \
         results/hipcc_version.txt \
         results/hipconfig_full.txt \
+        results/rocm_tools_summary.csv \
+        results/rocm_tuning_recommendations.md \
+        results/amd_smi_list.txt \
+        results/amd_smi_static.txt \
+        results/amd_smi_metric.txt \
+        results/rocm_smi_performance.txt \
+        results/rocm_bandwidth_test.txt \
+        results/rocprofiler_tools.txt \
+        results/rocprofiler_run.txt \
         results/matmul_benchmark.csv \
         results/precision_compare.csv \
         results/mlp_train_log.csv \

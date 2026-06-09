@@ -62,6 +62,7 @@ bash run_all_experiments.sh --allow-llm-hub
 
 - 单元测试
 - 环境检查和 ROCm 原始证据
+- ROCm 官方工具性能检测与调优证据：AMD SMI、ROCm SMI、Bandwidth Test、rocprofv3/ROCProfiler
 - 矩阵乘法 benchmark
 - FP32/FP16 精度与性能对比
 - MLP 前向/反向/参数更新训练实验
@@ -70,6 +71,7 @@ bash run_all_experiments.sh --allow-llm-hub
 - CPU/内存/ROCm GPU 资源与能耗采样
 - 本地 Qwen3-1.7B LLM 生成 benchmark
 - extractive RAG 与 local LLM RAG 模式对比
+- ROCm 工具汇总表 `results/rocm_tools_summary.csv` 与调优记录 `results/rocm_tuning_recommendations.md`
 - 所有 CSV、PNG 图表、`results/full_experiment_run.log`、`results/experiment_manifest.txt`
 
 ### 3. 启动本地 LLM Demo
@@ -100,6 +102,8 @@ grep "ROCm_GPU" results/matmul_benchmark.csv
 grep "ROCm_GPU" results/precision_compare.csv
 grep "ROCm_GPU" results/mlp_train_log.csv
 head results/llm_generation_benchmark.csv
+head results/rocm_tools_summary.csv
+sed -n '1,160p' results/rocm_tuning_recommendations.md
 ```
 
 判定规则：
@@ -121,6 +125,10 @@ git status --short
 git add \
   results/environment_report.txt \
   results/rocminfo.txt results/rocm_smi.txt results/hipcc_version.txt results/hipconfig_full.txt \
+  results/rocm_tools_summary.csv results/rocm_tuning_recommendations.md \
+  results/amd_smi_list.txt results/amd_smi_static.txt results/amd_smi_metric.txt \
+  results/rocm_smi_performance.txt results/rocm_bandwidth_test.txt \
+  results/rocprofiler_tools.txt results/rocprofiler_run.txt \
   results/matmul_benchmark.csv results/precision_compare.csv results/mlp_train_log.csv \
   results/latency_results.csv results/backend_results.csv results/resource_usage.csv \
   results/power_trace.csv results/energy_summary.csv \
@@ -148,7 +156,7 @@ git push origin main
 | 端到端应用 | 上传文档 -> 切块 -> 嵌入 -> 检索 -> 本地 LLM 回答 -> 资源调度展示 | 完整 RAG Pipeline + Gradio UI |
 | 异构资源分工 | CPU / GPU / NPU 后端抽象与调度策略 | CPU 已真实执行；ROCm 工具已能检测；GPU 实测需安装 PyTorch-HIP；NPU 仍为接口/检测层 |
 | 基础异构实验 | 矩阵乘法、FP32/FP16、MLP 训练 | 生成评分表要求的 CSV 与图表；ROCm 可用时自动加入 GPU 实测 |
-| 性能与能效 | 延迟 benchmark + CPU/内存/ROCm 功耗采样 | `resource_monitor.py` 生成 `power_trace.csv` 与 `energy_summary.csv`；有 `rocm-smi` 时采集 GPU power |
+| 性能与能效 | 延迟 benchmark + CPU/内存/ROCm 功耗采样 + ROCm 官方工具证据 | `resource_monitor.py` 生成 `power_trace.csv` 与 `energy_summary.csv`；`rocm_tools_profile.py` 采集 AMD SMI、ROCm SMI、Bandwidth Test、rocprofv3 证据并生成调优记录 |
 
 ---
 
@@ -217,6 +225,7 @@ git push origin main
 | 启动带本地 LLM 的 Web Demo | `bash scripts/run_demo_llm.sh` |
 | 启动抽取式 Web Demo | `bash run_demo.sh` |
 | 单独检查环境 | `python experiments/check_environment.py` |
+| 单独采集 ROCm 工具证据 | `python experiments/rocm_tools_profile.py` |
 | 单独跑 matmul / FP16 / MLP | `python experiments/basic_benchmarks.py` |
 | 单独跑 Agent 真实/模拟 benchmark | `python experiments/benchmark_real.py` |
 | 单独跑企业内网 QA transcript | `python experiments/demo_vertical_workflow.py` |
@@ -231,6 +240,12 @@ git push origin main
 |----------|------|
 | `results/environment_report.txt` | 环境检测报告（硬件、驱动、后端可用性） |
 | `results/rocminfo.txt` / `results/rocm_smi.txt` / `results/hipcc_version.txt` / `results/hipconfig_full.txt` | ROCm 命令行原始证据；无 ROCm 时记录 `COMMAND NOT FOUND` |
+| `results/rocm_tools_summary.csv` | ROCm 官方工具采集汇总：AMD SMI、ROCm SMI、Bandwidth Test、Profiler 的可用性、命令、输出文件和用途 |
+| `results/rocm_tuning_recommendations.md` | 基于 ROCm 工具和实验结果的调优说明，可直接用于报告“优化分析”部分 |
+| `results/amd_smi_list.txt` / `results/amd_smi_static.txt` / `results/amd_smi_metric.txt` | AMD SMI 原始输出：GPU 列表、静态信息、功耗/温度/显存/利用率等指标 |
+| `results/rocm_smi_performance.txt` | ROCm SMI 原始输出：兼容旧环境的 GPU power、clock、VRAM、temperature、utilization 证据 |
+| `results/rocm_bandwidth_test.txt` | ROCm Bandwidth Test 原始输出，用于说明 CPU-GPU/GPU-GPU 数据传输带宽 |
+| `results/rocprofiler_tools.txt` / `results/rocprofiler_run.txt` | ROCProfiler/rocprofv3 工具可用性与小型 ROCm PyTorch profiler probe 输出 |
 | `results/matmul_benchmark.csv` | CPU/ROCm GPU 矩阵乘法 benchmark（平均时间、标准差、加速比） |
 | `results/precision_compare.csv` | FP32/FP16 耗时、加速比、最大/平均绝对误差 |
 | `results/mlp_train_log.csv` | MLP 前向、反向、参数更新训练日志（loss、accuracy、epoch time） |
@@ -282,6 +297,7 @@ localdoc-agent-amd-ai/
 ├── experiments/                        # 实验脚本
 │   ├── __init__.py
 │   ├── check_environment.py            # 环境检测（硬件/驱动/后端/内核）
+│   ├── rocm_tools_profile.py           # ROCm 工具性能检测与调优证据
 │   ├── basic_benchmarks.py             # 基础实验：matmul / FP16 / MLP
 │   ├── resource_monitor.py             # CPU/内存/ROCm GPU 功耗采样
 │   ├── demo_vertical_workflow.py        # 垂直行业端到端 QA transcript
@@ -311,6 +327,15 @@ localdoc-agent-amd-ai/
 │
 ├── results/                            # 实验结果 CSV
 │   ├── environment_report.txt          # 环境检测报告
+│   ├── rocm_tools_summary.csv          # ROCm 工具采集汇总
+│   ├── rocm_tuning_recommendations.md  # ROCm 工具调优记录
+│   ├── amd_smi_list.txt                # AMD SMI GPU 列表
+│   ├── amd_smi_static.txt              # AMD SMI 静态硬件信息
+│   ├── amd_smi_metric.txt              # AMD SMI 运行指标
+│   ├── rocm_smi_performance.txt        # ROCm SMI 性能/功耗指标
+│   ├── rocm_bandwidth_test.txt         # ROCm Bandwidth Test 输出
+│   ├── rocprofiler_tools.txt           # ROCProfiler 工具可用性
+│   ├── rocprofiler_run.txt             # rocprofv3 小型 profile 输出
 │   ├── matmul_benchmark.csv            # 矩阵乘法基础实验
 │   ├── precision_compare.csv           # FP32/FP16 精度对比
 │   ├── mlp_train_log.csv               # MLP 训练日志
