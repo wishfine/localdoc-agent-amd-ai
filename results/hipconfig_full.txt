@@ -1,1 +1,32 @@
-COMMAND NOT FOUND: hipconfig
+HIP version: 7.12.60610-2bd1678d3d
+
+==hipconfig
+HIP_PATH           :/opt/rocm/core-7.12
+ROCM_PATH          :/opt/rocm
+HIP_COMPILER       :clang
+HIP_PLATFORM       :amd
+HIP_RUNTIME        :rocclr
+CPP_CONFIG         : -D__HIP_PLATFORM_HCC__= -D__HIP_PLATFORM_AMD__= -I/opt/rocm/core-7.12/include -I/include
+
+==hip-clang
+HIP_CLANG_PATH     :/opt/rocm/lib/llvm/bin
+AMD clang version 22.0.0git (https://github.com/ROCm/llvm-project.git c849bc16b0e49951d313756f20b73c2b28d321d7+PATCHED:9a6ac45c97a1e511db838c5b46257324d2de1780)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /opt/rocm/core-7.12/lib/llvm/bin
+hip-clang-cxxflags :
+ -O3
+hip-clang-ldflags :
+--driver-mode=g++ -O3 --hip-link
+
+== Environment Variables
+PATH =/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+LD_LIBRARY_PATH=/opt/rocm/lib
+HIP_DEVICE_LIB_PATH=/opt/rocm/lib/llvm/amdgcn/bitcode
+
+== Linux Kernel
+Hostname      :
+jupyter-github-wishfine---e7485ef2
+Linux jupyter-github-wishfine---e7485ef2 6.14.0-1018-oem #18-Ubuntu SMP PREEMPT_DYNAMIC Wed Dec 10 09:33:29 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+
+sh: 1: /opt/rocm/lib/llvm/bin/llc: not found

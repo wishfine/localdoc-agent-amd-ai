@@ -1,0 +1,1011 @@
+============================================
+  LocalDoc Agent - 一键全量实验
+  2026-06-09 13:08:48
+============================================
+
+[0;32m[信息][0m 当前 Python 的 ROCm tensor probe 通过，将跳过 .venv 以复用已验证的 ROCm 环境。
+[0;32m[信息][0m probe 详情: /tmp/localdoc_current_python_rocm_probe.log
+[1;33m[警告][0m LOCALDOC_USE_CURRENT_PYTHON/LOCALDOC_SKIP_VENV 已启用，跳过虚拟环境: /opt/workspace/localdoc-agent-amd-ai/.venv
+[0;32m[信息][0m 使用当前 Python: Python 3.12.3
+[0;32m[信息][0m Python: Python 3.12.3
+[0;32m[信息][0m 安装/检查基础依赖 ...
+  WARNING: The scripts pip, pip3 and pip3.12 are installed in '/home/jovyan/.local/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+
+============================================
+  Step 1/4: 单元测试
+============================================
+................................................                                                                                                                                                [100%]
+48 passed in 1.21s
+
+============================================
+  Step 2/4: 全量实验脚本
+============================================
+============================================
+  运行异构资源调度基准测试
+  LocalDoc Agent - AMD 锐龙 AI MAX+
+  自动检测硬件：有真实 GPU/NPU 则实测，否则 simulated
+============================================
+
+[0;32m[信息][0m 检查 Python 环境 ...
+[0;32m[信息][0m 找到 Python: python3 (3.12.3)
+[0;32m[信息][0m Python 版本检查通过: 3.12.3 (>= 3.9)
+[1;33m[警告][0m LOCALDOC_USE_CURRENT_PYTHON/LOCALDOC_SKIP_VENV 已启用，跳过虚拟环境: /opt/workspace/localdoc-agent-amd-ai/.venv
+[0;32m[信息][0m 使用当前 Python: Python 3.12.3
+[0;32m[信息][0m 检查并安装依赖 ...
+[0;32m[信息][0m 依赖安装完成。
+[0;32m[信息][0m 检查 ROCm runtime 辅助文件并执行最小 tensor probe ...
+[0;32m[info][0m Python: Python 3.12.3
+[0;32m[info][0m Checking ROCm runtime helper file: /opt/amdgpu/share/libdrm/amdgpu.ids
+[0;32m[info][0m Found source amdgpu.ids: /opt/workspace/localdoc-agent-amd-ai/.venv/lib/python3.12/site-packages/torch/share/libdrm/amdgpu.ids
+[1;33m[warn][0m No permission to write /opt/amdgpu/share/libdrm/amdgpu.ids
+[1;33m[warn][0m Run this with container/admin permission, or ask the AMD/Jupyter platform owner to execute:
+  mkdir -p /opt/amdgpu/share/libdrm
+  ln -sf /opt/workspace/localdoc-agent-amd-ai/.venv/lib/python3.12/site-packages/torch/share/libdrm/amdgpu.ids /opt/amdgpu/share/libdrm/amdgpu.ids
+[0;32m[info][0m Running a minimal ROCm tensor probe in a child Python process ...
+torch: 2.9.1+rocm7.12.0
+hip: 7.12.60610-2bd1678d3d
+cuda_available: True
+ROCm tensor probe ok: 14.0
+[0;32m[info][0m ROCm tensor probe passed.
+[0;32m[信息][0m ROCm runtime 检查完成。
+[0;32m[信息][0m 资源/能效监控已启动 (pid=1949)
+
+============================================
+  第 1 步: 环境检查
+============================================
+
+============================================================
+  环境检查 (Environment Check)
+============================================================
+============================================================
+  LocalDoc Agent - 环境检查报告
+  生成时间: 2026-06-09 13:09:06
+============================================================
+
+## Python 环境
+  Python 版本: 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0]
+  可执行文件: /usr/bin/python3
+  平台: Linux-6.14.0-1018-oem-x86_64-with-glibc2.39
+  架构: x86_64
+  处理器: x86_64
+
+## 内核信息
+  内核版本: 6.14.0-1018-oem
+  Strix Halo 兼容: True
+  ⚠️ Kernel 6.14.0-1018-oem >= 6.14: may work on Ubuntu OEM (>= 6.14.0-1018), but >= 6.17.0 (HWE) or >= 6.18.4 (other) recommended for stability.
+
+## 内存信息
+  total_memory_mb: 64069
+  available_memory_mb: 60364
+  memory_percent: 5.8
+  cpu_count: 32
+
+## PyTorch 环境
+  torch 已安装: True
+  torch 版本: 2.9.1+rocm7.12.0
+  torch.version.cuda: None
+  torch.version.hip: 7.12.60610-2bd1678d3d
+  torch.cuda.is_available(): True
+  GPU 名称: Radeon 8060S Graphics
+  GPU 数量: 1
+  GPU 架构: (11, 5)
+  ROCm tensor probe ok: True
+  ROCm tensor probe note: ok 14.0
+
+## ROCm 命令行工具证据
+  rocminfo: True -> /opt/workspace/localdoc-agent-amd-ai/results/rocminfo.txt
+  rocm-smi: True -> /opt/workspace/localdoc-agent-amd-ai/results/rocm_smi.txt
+  hipcc: True -> /opt/workspace/localdoc-agent-amd-ai/results/hipcc_version.txt
+  hipconfig: True -> /opt/workspace/localdoc-agent-amd-ai/results/hipconfig_full.txt
+  gfx 架构: ['gfx11', 'gfx1151']
+
+## ONNX Runtime 环境
+  onnxruntime 已安装: False
+  onnxruntime 版本: None
+  可用 EP 列表: []
+  VitisAIExecutionProvider: False
+  DmlExecutionProvider: False
+  RyzenAIExecutionProvider: False
+
+## 结论
+  ROCm GPU hardware/runtime detected: True
+  ROCm GPU tensor execution available: True
+  ROCm GPU benchmark usable: True
+  AMD NPU available: False
+  GPU mode: real ROCm GPU tensor execution available
+  NPU mode: unavailable
+  Current mode: real hardware execution
+
+## 注意事项
+  - ROCm 覆盖 GPU 计算，不覆盖 NPU
+  - Ryzen APU 上 ROCm 仅支持 PyTorch（不支持 TF/JAX/ONNX）
+  - NPU 推理需通过 Ryzen AI SDK 或 Lemonade
+  - Strix Halo 需要 kernel >= 6.17.0 (HWE) 或 >= 6.18.4
+
+
+报告已保存: /opt/workspace/localdoc-agent-amd-ai/results/environment_report.txt
+[0;32m[信息][0m 环境检查完成。
+
+============================================
+  第 2 步: ROCm 工具性能检测与调优证据
+============================================
+
+[0;32m[信息][0m 采集 AMD SMI / ROCm SMI / Bandwidth Test / ROCProfiler 工具证据 ...
+[0;32m[信息][0m 缺失的工具会写入 CSV 和 TXT，不会伪装成真实检测结果
+
+============================================================
+  ROCm tools profiling evidence
+============================================================
+  [saved] /opt/workspace/localdoc-agent-amd-ai/results/rocm_tools_summary.csv
+  [saved] /opt/workspace/localdoc-agent-amd-ai/results/rocm_tuning_recommendations.md
+  [OK] rocminfo: /opt/workspace/localdoc-agent-amd-ai/results/rocminfo.txt
+  [OK] amd-smi list: /opt/workspace/localdoc-agent-amd-ai/results/amd_smi_list.txt
+  [OK] amd-smi static: /opt/workspace/localdoc-agent-amd-ai/results/amd_smi_static.txt
+  [OK] amd-smi metric: /opt/workspace/localdoc-agent-amd-ai/results/amd_smi_metric.txt
+  [OK] rocm-smi: /opt/workspace/localdoc-agent-amd-ai/results/rocm_smi_performance.txt
+  [MISS] rocm-bandwidth-test: /opt/workspace/localdoc-agent-amd-ai/results/rocm_bandwidth_test.txt
+  [FAIL] rocprofiler tools: /opt/workspace/localdoc-agent-amd-ai/results/rocprofiler_tools.txt
+  [FAIL] rocprofv3 probe: /opt/workspace/localdoc-agent-amd-ai/results/rocprofiler_run.txt
+[0;32m[信息][0m ROCm 工具证据采集完成。
+
+============================================
+  第 3 步: 基础异构实验
+============================================
+
+[0;32m[信息][0m 运行矩阵乘法、FP32/FP16 精度对比、MLP 训练实验 ...
+[0;32m[信息][0m 如检测到 ROCm PyTorch，将自动加入 ROCm_GPU 实测；否则仅记录 CPU 与 unavailable 状态
+
+============================================================
+  Basic Heterogeneous Computing Benchmarks
+============================================================
+  Matmul sizes: [256, 512, 1024]
+  Precision sizes: [256, 512]
+  Repeats: 3
+  MLP epochs: 5
+
+[1/3] Matrix multiplication benchmark ...
+  [matmul] CPU size=256   avg=   0.169 ms
+  [matmul] Torch_CPU size=256   avg=   0.097 ms
+  [matmul] ROCm_GPU size=256   avg=   0.116 ms
+  [matmul] CPU size=512   avg=   2.996 ms
+  [matmul] Torch_CPU size=512   avg=  65.826 ms
+  [matmul] ROCm_GPU size=512   avg=   0.254 ms
+  [matmul] CPU size=1024  avg=  32.362 ms
+  [matmul] Torch_CPU size=1024  avg=  32.362 ms
+  [matmul] ROCm_GPU size=1024  avg=   0.810 ms
+
+[2/3] FP32/FP16 precision comparison ...
+  [precision] CPU size=256   fp32=   0.085 ms fp16=  39.292 ms
+  [precision] Torch_CPU size=256   fp32=   0.042 ms fp16=  10.529 ms
+  [precision] ROCm_GPU size=256   fp32=   0.070 ms fp16=   0.108 ms
+  [precision] CPU size=512   fp32=   3.316 ms fp16= 315.753 ms
+  [precision] Torch_CPU size=512   fp32=   0.825 ms fp16=  83.236 ms
+  [precision] ROCm_GPU size=512   fp32=   0.194 ms fp16=   0.028 ms
+
+[3/3] MLP training benchmark ...
+  [mlp] CPU epoch=1  loss=1.071814 acc=0.501953 time=   1.397 ms
+  [mlp] CPU epoch=2  loss=1.051276 acc=0.581055 time=   0.551 ms
+  [mlp] CPU epoch=3  loss=1.028154 acc=0.650391 time=   0.301 ms
+  [mlp] CPU epoch=4  loss=1.001043 acc=0.702148 time=   0.317 ms
+  [mlp] CPU epoch=5  loss=0.968593 acc=0.75293 time=   0.301 ms
+  [mlp] Torch_CPU epoch=1  loss=1.078651 acc=0.414062 time=1049.921 ms
+  [mlp] Torch_CPU epoch=2  loss=1.025704 acc=0.539062 time= 194.793 ms
+  [mlp] Torch_CPU epoch=3  loss=0.976549 acc=0.631836 time=   5.045 ms
+  [mlp] Torch_CPU epoch=4  loss=0.927027 acc=0.683594 time= 202.417 ms
+  [mlp] Torch_CPU epoch=5  loss=0.875841 acc=0.737305 time=   3.254 ms
+  [mlp] ROCm_GPU epoch=1  loss=1.0788   acc=0.416992 time= 322.529 ms
+  [mlp] ROCm_GPU epoch=2  loss=1.02573  acc=0.541992 time=   6.279 ms
+  [mlp] ROCm_GPU epoch=3  loss=0.976409 acc=0.625977 time=   4.536 ms
+  [mlp] ROCm_GPU epoch=4  loss=0.926851 acc=0.69043 time=   4.549 ms
+  [mlp] ROCm_GPU epoch=5  loss=0.875732 acc=0.727539 time=   4.529 ms
+  [saved] /opt/workspace/localdoc-agent-amd-ai/results/matmul_benchmark.csv
+  [saved] /opt/workspace/localdoc-agent-amd-ai/results/precision_compare.csv
+  [saved] /opt/workspace/localdoc-agent-amd-ai/results/mlp_train_log.csv
+
+============================================================
+  Basic benchmarks complete
+  ROCm_GPU rows are marked unavailable unless PyTorch HIP is detected.
+============================================================
+[0;32m[信息][0m 基础实验完成。
+
+============================================
+  第 4 步: Agent 延迟基准测试 (自动检测硬件)
+============================================
+
+[0;32m[信息][0m 开始基准测试 ...
+[0;32m[信息][0m 如有真实 AMD GPU/NPU 硬件，将自动使用真实后端
+[0;32m[信息][0m 如无硬件，将使用 simulated 模式（所有数据标记为 simulated）
+
+============================================================
+  Real Hardware Benchmark
+============================================================
+2026-06-09 13:09:20,928 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：检测到 PyTorch HIP 后端，ROCm/HIP 版本 = 7.12.60610-2bd1678d3d
+2026-06-09 13:09:20,963 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 可用 - Radeon 8060S Graphics
+2026-06-09 13:09:22,253 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：ROCm tensor 探针通过 - ok 14.0
+2026-06-09 13:09:22,254 | WARNING  | localdoc.backends.npu_backend | NPU 后端：未安装 ONNX Runtime。请参考 https://onnxruntime.ai/ 安装。
+如需 NPU 加速，请安装 Ryzen AI SDK 及对应的 ONNX Runtime 版本：
+  pip install onnxruntime-ryzen-ai
+[警告] SimulatedNPUBackend: CPU execution with artificial delay; not real AMD NPU hardware.
+2026-06-09 13:09:22,254 | WARNING  | localdoc.backends.simulated_npu | SimulatedNPUBackend 已初始化。这是一个模拟后端，所有计算在 CPU 上执行。请勿将结果作为真实 NPU 性能数据。
+
+  Backends detected:
+    CPU            available=✅  inference=real
+    GPU            available=✅  inference=real
+    NPU            available=❌  inference=fallback/sim
+    SimulatedNPU   available=✅  inference=fallback/sim
+
+  ✅ Real hardware backends: ['CPU', 'GPU']
+  Running real + simulated benchmarks for comparison.
+
+  Doc counts: [1, 5, 10, 20]
+  Chunk counts: [10, 50, 100]
+  Repeats: 3
+============================================================
+
+[1/4] Embedding benchmark ...
+2026-06-09 13:09:22,255 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 16 条语料，词汇表 109 维
+2026-06-09 13:09:22,256 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 16 条语料，词汇表 109 维
+2026-06-09 13:09:22,256 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 16 条语料，词汇表 109 维
+  [embed] docs=  1, CPU            ->      0.6 ms  [real_hardware]
+2026-06-09 13:09:22,256 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 16 条文本进行嵌入（维度=109）
+2026-06-09 13:09:22,456 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:22,457 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 16 条文本进行嵌入（维度=109）
+2026-06-09 13:09:22,457 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:22,457 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 16 条文本进行嵌入（维度=109）
+2026-06-09 13:09:22,457 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+  [embed] docs=  1, GPU            ->     67.2 ms  [real_hardware]
+2026-06-09 13:09:22,457 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 16
+2026-06-09 13:09:22,458 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 16 条语料，词汇表 109 维
+2026-06-09 13:09:22,458 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0814 秒模拟延迟（基础 0.0800 + 抖动 0.0014）
+2026-06-09 13:09:22,540 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 16
+2026-06-09 13:09:22,541 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 16 条语料，词汇表 109 维
+2026-06-09 13:09:22,541 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0815 秒模拟延迟（基础 0.0800 + 抖动 0.0015）
+2026-06-09 13:09:22,623 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 16
+2026-06-09 13:09:22,624 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 16 条语料，词汇表 109 维
+2026-06-09 13:09:22,625 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0814 秒模拟延迟（基础 0.0800 + 抖动 0.0014）
+  [embed] docs=  1, SimulatedNPU   ->     83.2 ms  [simulated]
+2026-06-09 13:09:22,709 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 80 条语料，词汇表 135 维
+2026-06-09 13:09:22,710 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 80 条语料，词汇表 135 维
+2026-06-09 13:09:22,711 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 80 条语料，词汇表 135 维
+  [embed] docs=  5, CPU            ->      1.2 ms  [real_hardware]
+2026-06-09 13:09:22,712 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 80 条文本进行嵌入（维度=135）
+2026-06-09 13:09:22,716 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:22,717 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 80 条文本进行嵌入（维度=135）
+2026-06-09 13:09:22,717 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:22,718 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 80 条文本进行嵌入（维度=135）
+2026-06-09 13:09:22,718 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+  [embed] docs=  5, GPU            ->      2.4 ms  [real_hardware]
+2026-06-09 13:09:22,718 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 80
+2026-06-09 13:09:22,719 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 80 条语料，词汇表 135 维
+2026-06-09 13:09:22,719 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.4009 秒模拟延迟（基础 0.4000 + 抖动 0.0009）
+2026-06-09 13:09:23,121 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 80
+2026-06-09 13:09:23,122 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 80 条语料，词汇表 135 维
+2026-06-09 13:09:23,123 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.4001 秒模拟延迟（基础 0.4000 + 抖动 0.0001）
+2026-06-09 13:09:23,524 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 80
+2026-06-09 13:09:23,526 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 80 条语料，词汇表 135 维
+2026-06-09 13:09:23,526 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.4025 秒模拟延迟（基础 0.4000 + 抖动 0.0025）
+  [embed] docs=  5, SimulatedNPU   ->    403.4 ms  [simulated]
+2026-06-09 13:09:23,933 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 160 条语料，词汇表 135 维
+2026-06-09 13:09:23,936 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 160 条语料，词汇表 135 维
+2026-06-09 13:09:23,938 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 160 条语料，词汇表 135 维
+  [embed] docs= 10, CPU            ->      3.0 ms  [real_hardware]
+2026-06-09 13:09:23,940 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 160 条文本进行嵌入（维度=135）
+2026-06-09 13:09:23,943 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:23,945 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 160 条文本进行嵌入（维度=135）
+2026-06-09 13:09:23,946 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:23,948 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 160 条文本进行嵌入（维度=135）
+2026-06-09 13:09:23,949 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+  [embed] docs= 10, GPU            ->      3.5 ms  [real_hardware]
+2026-06-09 13:09:23,949 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 160
+2026-06-09 13:09:23,952 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 160 条语料，词汇表 135 维
+2026-06-09 13:09:23,952 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.8000 秒模拟延迟（基础 0.8000 + 抖动 0.0000）
+2026-06-09 13:09:24,753 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 160
+2026-06-09 13:09:24,757 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 160 条语料，词汇表 135 维
+2026-06-09 13:09:24,757 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.8017 秒模拟延迟（基础 0.8000 + 抖动 0.0017）
+2026-06-09 13:09:25,560 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 160
+2026-06-09 13:09:25,563 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 160 条语料，词汇表 135 维
+2026-06-09 13:09:25,563 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.8010 秒模拟延迟（基础 0.8000 + 抖动 0.0010）
+  [embed] docs= 10, SimulatedNPU   ->    805.0 ms  [simulated]
+2026-06-09 13:09:26,370 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 320 条语料，词汇表 135 维
+2026-06-09 13:09:26,376 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 320 条语料，词汇表 135 维
+2026-06-09 13:09:26,381 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 320 条语料，词汇表 135 维
+  [embed] docs= 20, CPU            ->      5.4 ms  [real_hardware]
+2026-06-09 13:09:26,384 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 320 条文本进行嵌入（维度=135）
+2026-06-09 13:09:26,388 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:26,391 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 320 条文本进行嵌入（维度=135）
+2026-06-09 13:09:26,394 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:26,397 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 320 条文本进行嵌入（维度=135）
+2026-06-09 13:09:26,400 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+  [embed] docs= 20, GPU            ->      6.3 ms  [real_hardware]
+2026-06-09 13:09:26,400 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 320
+2026-06-09 13:09:26,405 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 320 条语料，词汇表 135 维
+2026-06-09 13:09:26,405 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 1.6005 秒模拟延迟（基础 1.6000 + 抖动 0.0005）
+2026-06-09 13:09:28,007 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 320
+2026-06-09 13:09:28,012 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 320 条语料，词汇表 135 维
+2026-06-09 13:09:28,012 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 1.6022 秒模拟延迟（基础 1.6000 + 抖动 0.0022）
+2026-06-09 13:09:29,615 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 320
+2026-06-09 13:09:29,621 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 320 条语料，词汇表 135 维
+2026-06-09 13:09:29,621 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 1.6005 秒模拟延迟（基础 1.6000 + 抖动 0.0005）
+  [embed] docs= 20, SimulatedNPU   ->   1607.7 ms  [simulated]
+
+[2/4] Query embedding benchmark ...
+2026-06-09 13:09:31,224 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 10 条语料，词汇表 88 维
+  [query_embed] chunks=  10, CPU            ->      0.0 ms  [real_hardware]
+2026-06-09 13:09:31,224 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 10 条文本进行嵌入（维度=88）
+2026-06-09 13:09:31,227 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,227 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=88）
+2026-06-09 13:09:31,227 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,227 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=88）
+2026-06-09 13:09:31,227 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,227 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=88）
+2026-06-09 13:09:31,228 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+  [query_embed] chunks=  10, GPU            ->      0.2 ms  [real_hardware]
+2026-06-09 13:09:31,228 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 10
+2026-06-09 13:09:31,228 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 10 条语料，词汇表 88 维
+2026-06-09 13:09:31,228 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0517 秒模拟延迟（基础 0.0500 + 抖动 0.0017）
+2026-06-09 13:09:31,280 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,281 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0079 秒模拟延迟（基础 0.0050 + 抖动 0.0029）
+2026-06-09 13:09:31,289 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,290 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0069 秒模拟延迟（基础 0.0050 + 抖动 0.0019）
+2026-06-09 13:09:31,297 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,298 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0053 秒模拟延迟（基础 0.0050 + 抖动 0.0003）
+  [query_embed] chunks=  10, SimulatedNPU   ->      7.8 ms  [simulated]
+2026-06-09 13:09:31,305 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 30 条语料，词汇表 135 维
+  [query_embed] chunks=  50, CPU            ->      0.0 ms  [real_hardware]
+2026-06-09 13:09:31,305 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 30 条文本进行嵌入（维度=135）
+2026-06-09 13:09:31,308 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,308 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:31,308 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,308 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:31,308 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,308 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:31,308 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+  [query_embed] chunks=  50, GPU            ->      0.2 ms  [real_hardware]
+2026-06-09 13:09:31,308 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 30
+2026-06-09 13:09:31,309 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 30 条语料，词汇表 135 维
+2026-06-09 13:09:31,309 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.1518 秒模拟延迟（基础 0.1500 + 抖动 0.0018）
+2026-06-09 13:09:31,462 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,462 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0069 秒模拟延迟（基础 0.0050 + 抖动 0.0019）
+2026-06-09 13:09:31,470 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,470 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0055 秒模拟延迟（基础 0.0050 + 抖动 0.0005）
+2026-06-09 13:09:31,476 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,476 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0052 秒模拟延迟（基础 0.0050 + 抖动 0.0002）
+  [query_embed] chunks=  50, SimulatedNPU   ->      6.9 ms  [simulated]
+2026-06-09 13:09:31,484 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 30 条语料，词汇表 135 维
+  [query_embed] chunks= 100, CPU            ->      0.0 ms  [real_hardware]
+2026-06-09 13:09:31,484 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 30 条文本进行嵌入（维度=135）
+2026-06-09 13:09:31,486 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,486 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:31,487 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,487 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:31,487 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,487 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:31,487 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+  [query_embed] chunks= 100, GPU            ->      0.2 ms  [real_hardware]
+2026-06-09 13:09:31,487 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 30
+2026-06-09 13:09:31,488 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 30 条语料，词汇表 135 维
+2026-06-09 13:09:31,488 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.1500 秒模拟延迟（基础 0.1500 + 抖动 0.0000）
+2026-06-09 13:09:31,638 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,639 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0055 秒模拟延迟（基础 0.0050 + 抖动 0.0005）
+2026-06-09 13:09:31,645 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,645 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0076 秒模拟延迟（基础 0.0050 + 抖动 0.0026）
+2026-06-09 13:09:31,653 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,654 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0060 秒模拟延迟（基础 0.0050 + 抖动 0.0010）
+  [query_embed] chunks= 100, SimulatedNPU   ->      7.5 ms  [simulated]
+
+[3/4] Generation benchmark ...
+  [generate] CPU            ->      0.1 ms  [real_hardware]  answer=28 chars
+2026-06-09 13:09:31,661 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:31,670 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:31,671 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:31,671 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:31,671 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:31,671 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+  [generate] GPU            ->      3.4 ms  [real_hardware]  answer=28 chars
+2026-06-09 13:09:31,671 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:31,671 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0214 秒模拟延迟
+2026-06-09 13:09:31,693 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:31,693 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:31,693 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0207 秒模拟延迟
+2026-06-09 13:09:31,714 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:31,714 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:31,714 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0223 秒模拟延迟
+2026-06-09 13:09:31,737 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+  [generate] SimulatedNPU   ->     22.0 ms  [simulated]  answer=28 chars
+
+[4/4] End-to-end RAG benchmark ...
+2026-06-09 13:09:31,738 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 10 条语料，词汇表 108 维
+2026-06-09 13:09:31,738 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 10 条语料，词汇表 97 维
+2026-06-09 13:09:31,738 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 10 条语料，词汇表 76 维
+  [e2e_rag] docs=  1, CPU            ->      0.4 ms  [real_hardware]
+2026-06-09 13:09:31,738 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 10 条文本进行嵌入（维度=88）
+2026-06-09 13:09:31,741 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,741 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=88）
+2026-06-09 13:09:31,741 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,741 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:31,741 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:31,741 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 10 条文本进行嵌入（维度=114）
+2026-06-09 13:09:31,741 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,741 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=114）
+2026-06-09 13:09:31,742 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,742 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:31,742 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:31,742 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 10 条文本进行嵌入（维度=105）
+2026-06-09 13:09:31,742 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,742 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=105）
+2026-06-09 13:09:31,742 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:31,742 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:31,742 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+  [e2e_rag] docs=  1, GPU            ->      1.3 ms  [real_hardware]
+2026-06-09 13:09:31,742 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 10
+2026-06-09 13:09:31,743 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 10 条语料，词汇表 102 维
+2026-06-09 13:09:31,743 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0528 秒模拟延迟（基础 0.0500 + 抖动 0.0028）
+2026-06-09 13:09:31,795 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,796 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0062 秒模拟延迟（基础 0.0050 + 抖动 0.0012）
+2026-06-09 13:09:31,802 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:31,802 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0218 秒模拟延迟
+2026-06-09 13:09:31,824 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:31,825 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 10
+2026-06-09 13:09:31,825 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 10 条语料，词汇表 88 维
+2026-06-09 13:09:31,825 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0503 秒模拟延迟（基础 0.0500 + 抖动 0.0003）
+2026-06-09 13:09:31,876 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,877 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0076 秒模拟延迟（基础 0.0050 + 抖动 0.0026）
+2026-06-09 13:09:31,886 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:31,886 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0208 秒模拟延迟
+2026-06-09 13:09:31,908 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:31,908 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 10
+2026-06-09 13:09:31,909 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 10 条语料，词汇表 106 维
+2026-06-09 13:09:31,909 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0517 秒模拟延迟（基础 0.0500 + 抖动 0.0017）
+2026-06-09 13:09:31,961 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:31,962 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0072 秒模拟延迟（基础 0.0050 + 抖动 0.0022）
+2026-06-09 13:09:31,970 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:31,970 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0208 秒模拟延迟
+2026-06-09 13:09:31,991 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+  [e2e_rag] docs=  1, SimulatedNPU   ->     83.1 ms  [simulated]
+2026-06-09 13:09:31,994 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 50 条语料，词汇表 135 维
+2026-06-09 13:09:31,995 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 50 条语料，词汇表 135 维
+2026-06-09 13:09:31,996 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 50 条语料，词汇表 135 维
+  [e2e_rag] docs=  5, CPU            ->      1.6 ms  [real_hardware]
+2026-06-09 13:09:31,997 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 50 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,000 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,000 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,000 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,000 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:32,001 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:32,001 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 50 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,001 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,002 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,002 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,002 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:32,002 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:32,003 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 50 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,003 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,003 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,003 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,004 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:32,004 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+  [e2e_rag] docs=  5, GPU            ->      2.3 ms  [real_hardware]
+2026-06-09 13:09:32,004 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 50
+2026-06-09 13:09:32,005 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 50 条语料，词汇表 135 维
+2026-06-09 13:09:32,005 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.2505 秒模拟延迟（基础 0.2500 + 抖动 0.0005）
+2026-06-09 13:09:32,256 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:32,256 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0059 秒模拟延迟（基础 0.0050 + 抖动 0.0009）
+2026-06-09 13:09:32,263 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:32,264 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0203 秒模拟延迟
+2026-06-09 13:09:32,285 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:32,285 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 50
+2026-06-09 13:09:32,287 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 50 条语料，词汇表 135 维
+2026-06-09 13:09:32,287 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.2519 秒模拟延迟（基础 0.2500 + 抖动 0.0019）
+2026-06-09 13:09:32,539 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:32,539 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0077 秒模拟延迟（基础 0.0050 + 抖动 0.0027）
+2026-06-09 13:09:32,548 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:32,549 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0204 秒模拟延迟
+2026-06-09 13:09:32,570 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:32,571 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 50
+2026-06-09 13:09:32,572 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 50 条语料，词汇表 135 维
+2026-06-09 13:09:32,572 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.2504 秒模拟延迟（基础 0.2500 + 抖动 0.0004）
+2026-06-09 13:09:32,823 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:32,823 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0068 秒模拟延迟（基础 0.0050 + 抖动 0.0018）
+2026-06-09 13:09:32,831 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:32,831 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0206 秒模拟延迟
+2026-06-09 13:09:32,852 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+  [e2e_rag] docs=  5, SimulatedNPU   ->    282.7 ms  [simulated]
+2026-06-09 13:09:32,854 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 100 条语料，词汇表 135 维
+2026-06-09 13:09:32,856 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 100 条语料，词汇表 135 维
+2026-06-09 13:09:32,858 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 100 条语料，词汇表 135 维
+  [e2e_rag] docs= 10, CPU            ->      2.4 ms  [real_hardware]
+2026-06-09 13:09:32,860 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 100 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,863 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,863 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,863 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,863 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:32,864 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:32,865 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 100 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,865 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,865 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,866 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,866 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:32,866 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:32,867 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 100 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,868 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,868 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:32,868 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:32,869 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:32,869 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+  [e2e_rag] docs= 10, GPU            ->      3.2 ms  [real_hardware]
+2026-06-09 13:09:32,869 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 100
+2026-06-09 13:09:32,870 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 100 条语料，词汇表 135 维
+2026-06-09 13:09:32,870 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.5008 秒模拟延迟（基础 0.5000 + 抖动 0.0008）
+2026-06-09 13:09:33,372 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:33,372 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0074 秒模拟延迟（基础 0.0050 + 抖动 0.0024）
+2026-06-09 13:09:33,381 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:33,381 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0230 秒模拟延迟
+2026-06-09 13:09:33,405 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:33,405 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 100
+2026-06-09 13:09:33,408 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 100 条语料，词汇表 135 维
+2026-06-09 13:09:33,408 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.5012 秒模拟延迟（基础 0.5000 + 抖动 0.0012）
+2026-06-09 13:09:33,910 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:33,910 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0063 秒模拟延迟（基础 0.0050 + 抖动 0.0013）
+2026-06-09 13:09:33,918 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:33,918 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0226 秒模拟延迟
+2026-06-09 13:09:33,940 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:33,941 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 100
+2026-06-09 13:09:33,943 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 100 条语料，词汇表 135 维
+2026-06-09 13:09:33,943 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.5006 秒模拟延迟（基础 0.5000 + 抖动 0.0006）
+2026-06-09 13:09:34,445 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:34,445 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0077 秒模拟延迟（基础 0.0050 + 抖动 0.0027）
+2026-06-09 13:09:34,454 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:34,455 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0229 秒模拟延迟
+2026-06-09 13:09:34,478 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+  [e2e_rag] docs= 10, SimulatedNPU   ->    536.6 ms  [simulated]
+2026-06-09 13:09:34,483 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 200 条语料，词汇表 135 维
+2026-06-09 13:09:34,488 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 200 条语料，词汇表 135 维
+2026-06-09 13:09:34,492 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 200 条语料，词汇表 135 维
+  [e2e_rag] docs= 20, CPU            ->      4.8 ms  [real_hardware]
+2026-06-09 13:09:34,495 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 200 条文本进行嵌入（维度=135）
+2026-06-09 13:09:34,499 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:34,499 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:34,499 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:34,500 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:34,500 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:34,502 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 200 条文本进行嵌入（维度=135）
+2026-06-09 13:09:34,504 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:34,504 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:34,504 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:34,505 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:34,505 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+2026-06-09 13:09:34,507 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 200 条文本进行嵌入（维度=135）
+2026-06-09 13:09:34,509 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:34,509 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：在 cuda 上对 1 条文本进行嵌入（维度=135）
+2026-06-09 13:09:34,509 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 嵌入完成
+2026-06-09 13:09:34,510 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：使用 GPU 加速句子评分
+2026-06-09 13:09:34,510 | INFO     | localdoc.backends.gpu_backend | AMD GPU 后端：GPU 评分完成，最佳句子索引 = 0
+  [e2e_rag] docs= 20, GPU            ->      5.7 ms  [real_hardware]
+2026-06-09 13:09:34,510 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 200
+2026-06-09 13:09:34,513 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 200 条语料，词汇表 135 维
+2026-06-09 13:09:34,513 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 1.0010 秒模拟延迟（基础 1.0000 + 抖动 0.0010）
+2026-06-09 13:09:35,516 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:35,516 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0078 秒模拟延迟（基础 0.0050 + 抖动 0.0028）
+2026-06-09 13:09:35,527 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:35,527 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0204 秒模拟延迟
+2026-06-09 13:09:35,548 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:35,548 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 200
+2026-06-09 13:09:35,553 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 200 条语料，词汇表 135 维
+2026-06-09 13:09:35,553 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 1.0017 秒模拟延迟（基础 1.0000 + 抖动 0.0017）
+2026-06-09 13:09:36,556 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:36,557 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0069 秒模拟延迟（基础 0.0050 + 抖动 0.0019）
+2026-06-09 13:09:36,565 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:36,566 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0229 秒模拟延迟
+2026-06-09 13:09:36,590 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+2026-06-09 13:09:36,590 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] fit_and_embed 被调用，实际在 CPU 上执行。文本数 = 200
+2026-06-09 13:09:36,595 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 200 条语料，词汇表 135 维
+2026-06-09 13:09:36,595 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 1.0014 秒模拟延迟（基础 1.0000 + 抖动 0.0014）
+2026-06-09 13:09:37,598 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] transform 被调用，实际在 CPU 上执行。文本数 = 1
+2026-06-09 13:09:37,598 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0061 秒模拟延迟（基础 0.0050 + 抖动 0.0011）
+2026-06-09 13:09:37,607 | WARNING  | localdoc.backends.simulated_npu | [模拟 NPU] generate_answer 被调用，实际在 CPU 上执行。
+2026-06-09 13:09:37,607 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 添加 0.0221 秒模拟延迟
+2026-06-09 13:09:37,630 | INFO     | localdoc.backends.simulated_npu | [模拟 NPU] 问答完成（CPU 实际计算 + 模拟延迟）
+  [e2e_rag] docs= 20, SimulatedNPU   ->   1040.0 ms  [simulated]
+
+[save] Writing CSV ...
+  [saved] /opt/workspace/localdoc-agent-amd-ai/results/latency_results.csv
+  [saved] /opt/workspace/localdoc-agent-amd-ai/results/backend_results.csv
+  [saved] /opt/workspace/localdoc-agent-amd-ai/results/resource_usage.csv
+
+============================================================
+  ⚠️ SimulatedNPU: CPU execution with artificial delay.
+     CSV marked as 'simulated', NOT 'real_hardware'.
+============================================================
+[0;32m[信息][0m 基准测试完成。
+
+============================================
+  第 5 步: 垂直行业应用流程
+============================================
+
+============================================================
+  Vertical Enterprise Policy QA Demo
+============================================================
+2026-06-09 13:09:38,501 | INFO     | localdoc.embedding | EmbeddingEngine 使用后端模式: CPUBackend
+2026-06-09 13:09:38,502 | INFO     | localdoc.retriever | DocumentRetriever 初始化完成
+2026-06-09 13:09:38,502 | INFO     | localdoc.generator | AnswerGenerator 使用后端模式: CPUBackend
+2026-06-09 13:09:38,502 | INFO     | localdoc.agent | LocalDocAgent 初始化完成
+  后端: CPUBackend
+  调度器: 已启用
+2026-06-09 13:09:38,502 | INFO     | localdoc.agent | 开始导入目录: /opt/workspace/localdoc-agent-amd-ai/examples/enterprise_policy
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task document_loading -> backend 'cpu': CPU is optimal for I/O-bound document loading
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task document_loading: selected_backend=CPU (CPU is optimal for I/O-bound document loading)
+2026-06-09 13:09:38,502 | INFO     | localdoc.loader | 成功加载 Markdown 文件: incident_sop.md (286 字符)
+2026-06-09 13:09:38,502 | INFO     | localdoc.loader | 成功加载 Markdown 文件: security_policy.md (325 字符)
+2026-06-09 13:09:38,502 | INFO     | localdoc.loader | 目录加载完成: /opt/workspace/localdoc-agent-amd-ai/examples/enterprise_policy - 成功 2 个文件
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task document_loading completed in 0.0005s (selected_backend=CPU)
+2026-06-09 13:09:38,502 | INFO     | localdoc.agent |   发现 2 个可加载文件
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task chunking -> backend 'cpu': CPU is sufficient for text chunking
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task chunking: selected_backend=CPU (CPU is sufficient for text chunking)
+2026-06-09 13:09:38,502 | INFO     | localdoc.chunker | 文本分块完成: source='/opt/workspace/localdoc-agent-amd-ai/examples/enterprise_policy/incident_sop.md', 总长度=285, 生成 7 个块
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task chunking completed in 0.0001s (selected_backend=CPU)
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task chunking -> backend 'cpu': CPU is sufficient for text chunking
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task chunking: selected_backend=CPU (CPU is sufficient for text chunking)
+2026-06-09 13:09:38,502 | INFO     | localdoc.chunker | 文本分块完成: source='/opt/workspace/localdoc-agent-amd-ai/examples/enterprise_policy/security_policy.md', 总长度=324, 生成 9 个块
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task chunking completed in 0.0000s (selected_backend=CPU)
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task embedding -> backend 'cpu': CPU fallback for embedding
+2026-06-09 13:09:38,502 | INFO     | localdoc.scheduler | Task embedding: selected_backend=CPU (CPU fallback for embedding)
+2026-06-09 13:09:38,504 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 16 条语料，词汇表 219 维
+2026-06-09 13:09:38,504 | INFO     | localdoc.embedding | 向量化完成: 16 个块, 维度=219
+2026-06-09 13:09:38,504 | INFO     | localdoc.scheduler | Task embedding completed in 0.0017s (selected_backend=CPU)
+2026-06-09 13:09:38,504 | INFO     | localdoc.retriever | 索引已清空，共移除 0 个文档块
+2026-06-09 13:09:38,505 | INFO     | localdoc.retriever | 索引更新: 新增 16 个文档块, 总计 16 个
+2026-06-09 13:09:38,505 | INFO     | localdoc.agent | 向量索引重建完成: 16 个块
+2026-06-09 13:09:38,505 | INFO     | localdoc.agent | 目录导入完成: /opt/workspace/localdoc-agent-amd-ai/examples/enterprise_policy - 16 个块, 耗时 0.00s
+2026-06-09 13:09:38,505 | INFO     | localdoc.agent | 查询: '为什么企业内网知识库助手不能调用外部 API？' (top_k=3)
+2026-06-09 13:09:38,505 | INFO     | localdoc.scheduler | Task retrieval -> backend 'cpu': CPU fallback for retrieval
+2026-06-09 13:09:38,505 | INFO     | localdoc.scheduler | Task retrieval: selected_backend=CPU (CPU fallback for retrieval)
+2026-06-09 13:09:38,505 | INFO     | localdoc.retriever | 检索完成: query='为什么企业内网知识库助手不能调用外部 API？...', 返回 3 个结果, 最高分=0.427
+2026-06-09 13:09:38,505 | INFO     | localdoc.scheduler | Task retrieval completed in 0.0003s (selected_backend=CPU)
+2026-06-09 13:09:38,505 | INFO     | localdoc.scheduler | Task generation -> backend 'cpu': CPU fallback for generation
+2026-06-09 13:09:38,505 | INFO     | localdoc.scheduler | Task generation: selected_backend=CPU (CPU fallback for generation)
+2026-06-09 13:09:38,505 | INFO     | localdoc.generator | 后端生成回答成功 (37 字符)
+2026-06-09 13:09:38,505 | INFO     | localdoc.scheduler | Task generation completed in 0.0002s (selected_backend=CPU)
+2026-06-09 13:09:38,505 | INFO     | localdoc.agent | 查询完成: 0.001s, 来源数 2
+2026-06-09 13:09:38,506 | INFO     | localdoc.retriever | 检索完成: query='为什么企业内网知识库助手不能调用外部 API？...', 返回 3 个结果, 最高分=0.427
+2026-06-09 13:09:38,506 | INFO     | localdoc.agent | 查询: '本地智能问答系统需要记录哪些审计信息？' (top_k=3)
+2026-06-09 13:09:38,506 | INFO     | localdoc.scheduler | Task retrieval -> backend 'cpu': CPU fallback for retrieval
+2026-06-09 13:09:38,506 | INFO     | localdoc.scheduler | Task retrieval: selected_backend=CPU (CPU fallback for retrieval)
+2026-06-09 13:09:38,506 | INFO     | localdoc.retriever | 检索完成: query='本地智能问答系统需要记录哪些审计信息？...', 返回 3 个结果, 最高分=0.4954
+2026-06-09 13:09:38,506 | INFO     | localdoc.scheduler | Task retrieval completed in 0.0003s (selected_backend=CPU)
+2026-06-09 13:09:38,506 | INFO     | localdoc.scheduler | Task generation -> backend 'cpu': CPU fallback for generation
+2026-06-09 13:09:38,506 | INFO     | localdoc.scheduler | Task generation: selected_backend=CPU (CPU fallback for generation)
+2026-06-09 13:09:38,506 | INFO     | localdoc.generator | 后端生成回答成功 (42 字符)
+2026-06-09 13:09:38,506 | INFO     | localdoc.scheduler | Task generation completed in 0.0001s (selected_backend=CPU)
+2026-06-09 13:09:38,506 | INFO     | localdoc.agent | 查询完成: 0.000s, 来源数 1
+2026-06-09 13:09:38,507 | INFO     | localdoc.retriever | 检索完成: query='本地智能问答系统需要记录哪些审计信息？...', 返回 3 个结果, 最高分=0.4954
+2026-06-09 13:09:38,507 | INFO     | localdoc.agent | 查询: 'CPU、GPU、NPU 在这个企业内网助手中分别适合承担什么任务？' (top_k=3)
+2026-06-09 13:09:38,507 | INFO     | localdoc.scheduler | Task retrieval -> backend 'cpu': CPU fallback for retrieval
+2026-06-09 13:09:38,507 | INFO     | localdoc.scheduler | Task retrieval: selected_backend=CPU (CPU fallback for retrieval)
+2026-06-09 13:09:38,507 | INFO     | localdoc.retriever | 检索完成: query='CPU、GPU、NPU 在这个企业内网助手中分别适合承担什么任务？...', 返回 3 个结果, 最高分=0.2521
+2026-06-09 13:09:38,507 | INFO     | localdoc.scheduler | Task retrieval completed in 0.0003s (selected_backend=CPU)
+2026-06-09 13:09:38,507 | INFO     | localdoc.scheduler | Task generation -> backend 'cpu': CPU fallback for generation
+2026-06-09 13:09:38,507 | INFO     | localdoc.scheduler | Task generation: selected_backend=CPU (CPU fallback for generation)
+2026-06-09 13:09:38,507 | INFO     | localdoc.generator | 后端生成回答成功 (37 字符)
+2026-06-09 13:09:38,507 | INFO     | localdoc.scheduler | Task generation completed in 0.0001s (selected_backend=CPU)
+2026-06-09 13:09:38,507 | INFO     | localdoc.agent | 查询完成: 0.000s, 来源数 2
+2026-06-09 13:09:38,507 | INFO     | localdoc.retriever | 检索完成: query='CPU、GPU、NPU 在这个企业内网助手中分别适合承担什么任务？...', 返回 3 个结果, 最高分=0.2521
+2026-06-09 13:09:38,507 | INFO     | localdoc.agent | 查询: '演示这个系统时至少要展示哪些结果？' (top_k=3)
+2026-06-09 13:09:38,507 | INFO     | localdoc.scheduler | Task retrieval -> backend 'cpu': CPU fallback for retrieval
+2026-06-09 13:09:38,507 | INFO     | localdoc.scheduler | Task retrieval: selected_backend=CPU (CPU fallback for retrieval)
+2026-06-09 13:09:38,508 | INFO     | localdoc.retriever | 检索完成: query='演示这个系统时至少要展示哪些结果？...', 返回 3 个结果, 最高分=0.4658
+2026-06-09 13:09:38,508 | INFO     | localdoc.scheduler | Task retrieval completed in 0.0003s (selected_backend=CPU)
+2026-06-09 13:09:38,508 | INFO     | localdoc.scheduler | Task generation -> backend 'cpu': CPU fallback for generation
+2026-06-09 13:09:38,508 | INFO     | localdoc.scheduler | Task generation: selected_backend=CPU (CPU fallback for generation)
+2026-06-09 13:09:38,508 | INFO     | localdoc.generator | 后端生成回答成功 (46 字符)
+2026-06-09 13:09:38,508 | INFO     | localdoc.scheduler | Task generation completed in 0.0001s (selected_backend=CPU)
+2026-06-09 13:09:38,508 | INFO     | localdoc.agent | 查询完成: 0.000s, 来源数 2
+2026-06-09 13:09:38,508 | INFO     | localdoc.retriever | 检索完成: query='演示这个系统时至少要展示哪些结果？...', 返回 3 个结果, 最高分=0.4658
+  [saved] /opt/workspace/localdoc-agent-amd-ai/results/vertical_demo_transcript.csv
+[0;32m[信息][0m 垂直行业应用 transcript 已生成。
+
+============================================
+  第 6 步: 本地 LLM Benchmark (可选)
+============================================
+
+============================================================
+  LLM Generation Latency Benchmark
+  Model: Qwen/Qwen3-1.7B
+  ⚠️ Local LLM inference, NOT AMD hardware benchmark
+============================================================
+
+[1/3] 请用三句话解释什么是异构计算。...
+2026-06-09 13:09:47,877 | INFO     | localdoc.backends.local_llm_backend | Loading local LLM from: /opt/workspace/localdoc-agent-amd-ai/models/qwen3-1.7b
+2026-06-09 13:09:49,237 | INFO     | localdoc.backends.local_llm_backend | Using AMD ROCm GPU (HIP 7.12.60610-2bd1678d3d) for LLM inference; probe=ok 14.0
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|                                                                                                                                                        | 0/311 [00:00<?, ?it/s]Loading weights:  11%|███████████████                                                                                                                               | 33/311 [00:00<00:00, 329.94it/s]Loading weights:  28%|███████████████████████████████████████▋                                                                                                      | 87/311 [00:00<00:00, 453.04it/s]Loading weights:  45%|███████████████████████████████████████████████████████████████▉                                                                             | 141/311 [00:00<00:00, 492.61it/s]Loading weights:  64%|█████████████████████████████████████████████████████████████████████████████████████████▊                                                   | 198/311 [00:00<00:00, 522.65it/s]Loading weights:  81%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████▊                           | 251/311 [00:00<00:00, 302.45it/s]Loading weights:  94%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▉         | 291/311 [00:01<00:00, 220.88it/s]Loading weights: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 311/311 [00:01<00:00, 283.05it/s]
+2026-06-09 13:09:53,173 | INFO     | localdoc.backends.local_llm_backend | Local LLM loaded in 14.61s (device=cuda, dtype=torch.float16)
+/home/jovyan/.local/lib/python3.12/site-packages/transformers/integrations/sdpa_attention.py:92: UserWarning: Flash Efficient attention on Current AMD GPU is still experimental. Enable it with TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1. (Triggered internally at /__w/rockrel/rockrel/external-builds/pytorch/pytorch/aten/src/ATen/native/transformers/hip/sdp_utils.cpp:309.)
+  attn_output = torch.nn.functional.scaled_dot_product_attention(
+/home/jovyan/.local/lib/python3.12/site-packages/transformers/integrations/sdpa_attention.py:92: UserWarning: Mem Efficient attention on Current AMD GPU is still experimental. Enable it with TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1. (Triggered internally at /__w/rockrel/rockrel/external-builds/pytorch/pytorch/aten/src/ATen/native/transformers/hip/sdp_utils.cpp:360.)
+  attn_output = torch.nn.functional.scaled_dot_product_attention(
+  回答: 异构计算是在同一个系统中同时使用不同类型的处理单元，如CPU、GPU、NPU或FPGA。CPU适合复杂控制逻辑和通用任务...
+  耗时: 21.58s, 输出: 122 字符, ~8.5 tokens/s
+
+[2/3] 请说明 CPU、GPU、NPU 分别适合什么任务。...
+  回答: CPU 适合复杂控制逻辑和通用任务，GPU 适合大规模并行计算，NPU 适合低功耗神经网络推理。...
+  耗时: 1.68s, 输出: 48 字符, ~43.0 tokens/s
+
+[3/3] 为什么本地知识库智能体适合隐私敏感场景？...
+  回答: 本地知识库智能体适合隐私敏感场景，因为其将文档存储和推理过程完全放在本地完成，不依赖云端服务，从而保护用户数据隐私。...
+  耗时: 1.95s, 输出: 58 字符, ~44.6 tokens/s
+
+✅ 结果已保存: /opt/workspace/localdoc-agent-amd-ai/results/llm_generation_benchmark.csv
+[0;32m[信息][0m 本地 LLM benchmark 完成。
+============================================================
+  RAG Mode Comparison Benchmark
+  ⚠️ Local LLM inference, NOT AMD hardware benchmark
+============================================================
+
+[1] 运行抽取式回答 (extractive) ...
+2026-06-09 13:10:04,747 | INFO     | localdoc.embedding | EmbeddingEngine 使用 TF-IDF 回退模式（无需 GPU/外部模型）
+2026-06-09 13:10:04,747 | INFO     | localdoc.retriever | DocumentRetriever 初始化完成
+2026-06-09 13:10:04,747 | INFO     | localdoc.generator | AnswerGenerator 使用抽取式回退模式
+2026-06-09 13:10:04,747 | INFO     | localdoc.agent | LocalDocAgent 初始化完成
+  后端: None (使用回退方案)
+  调度器: 未启用
+2026-06-09 13:10:04,747 | INFO     | localdoc.agent | 开始导入文档: tmp3cht4hwh.md
+2026-06-09 13:10:04,747 | INFO     | localdoc.loader | 成功加载 Markdown 文件: tmp3cht4hwh.md (274 字符)
+2026-06-09 13:10:04,748 | INFO     | localdoc.chunker | 文本分块完成: source='/tmp/tmp3cht4hwh.md', 总长度=273, 生成 8 个块
+2026-06-09 13:10:04,748 | INFO     | localdoc.embedding | 向量化完成: 8 个块, 维度=111
+2026-06-09 13:10:04,748 | INFO     | localdoc.retriever | 索引已清空，共移除 0 个文档块
+2026-06-09 13:10:04,748 | INFO     | localdoc.retriever | 索引更新: 新增 8 个文档块, 总计 8 个
+2026-06-09 13:10:04,748 | INFO     | localdoc.agent | 向量索引重建完成: 8 个块
+2026-06-09 13:10:04,748 | INFO     | localdoc.agent | 文档导入完成: tmp3cht4hwh.md - 8 个块，总块数 8
+2026-06-09 13:10:04,748 | INFO     | localdoc.agent | 查询: '什么是异构计算？它有什么优势？' (top_k=3)
+2026-06-09 13:10:04,748 | INFO     | localdoc.retriever | 检索完成: query='什么是异构计算？它有什么优势？...', 返回 3 个结果, 最高分=0.3533
+2026-06-09 13:10:04,749 | INFO     | localdoc.generator | 抽取式回答生成完成: 提取 4 个相关句子
+2026-06-09 13:10:04,749 | INFO     | localdoc.agent | 查询完成: 0.001s, 来源数 1
+  耗时: 0.002s
+  回答: 根据文档内容，找到以下相关信息：
+
+1. # 异构计算概述异构计算是指在同一个计算系统中同时使用不同类型的处理单元来执行不同类型的任务。（来源: tmp3cht...
+
+[2] 运行本地 LLM 回答 (Qwen3-1.7B) ...
+2026-06-09 13:10:04,750 | INFO     | localdoc.embedding | EmbeddingEngine 使用后端模式: LocalLLMBackend
+2026-06-09 13:10:04,750 | INFO     | localdoc.retriever | DocumentRetriever 初始化完成
+2026-06-09 13:10:04,750 | INFO     | localdoc.generator | AnswerGenerator 使用后端模式: LocalLLMBackend
+2026-06-09 13:10:04,750 | INFO     | localdoc.agent | LocalDocAgent 初始化完成
+  后端: LocalLLMBackend
+  调度器: 未启用
+2026-06-09 13:10:04,750 | INFO     | localdoc.agent | 开始导入文档: tmp75gclx7_.md
+2026-06-09 13:10:04,750 | INFO     | localdoc.loader | 成功加载 Markdown 文件: tmp75gclx7_.md (274 字符)
+2026-06-09 13:10:04,750 | INFO     | localdoc.chunker | 文本分块完成: source='/tmp/tmp75gclx7_.md', 总长度=273, 生成 8 个块
+2026-06-09 13:10:04,751 | INFO     | localdoc.backends.cpu_backend | CPU 后端：fit 8 条语料，词汇表 111 维
+2026-06-09 13:10:04,751 | INFO     | localdoc.embedding | 向量化完成: 8 个块, 维度=111
+2026-06-09 13:10:04,751 | INFO     | localdoc.retriever | 索引已清空，共移除 0 个文档块
+2026-06-09 13:10:04,751 | INFO     | localdoc.retriever | 索引更新: 新增 8 个文档块, 总计 8 个
+2026-06-09 13:10:04,751 | INFO     | localdoc.agent | 向量索引重建完成: 8 个块
+2026-06-09 13:10:04,751 | INFO     | localdoc.agent | 文档导入完成: tmp75gclx7_.md - 8 个块，总块数 8
+2026-06-09 13:10:04,751 | INFO     | localdoc.agent | 查询: '什么是异构计算？它有什么优势？' (top_k=3)
+2026-06-09 13:10:04,752 | INFO     | localdoc.retriever | 检索完成: query='什么是异构计算？它有什么优势？...', 返回 3 个结果, 最高分=0.3533
+2026-06-09 13:10:11,323 | INFO     | localdoc.backends.local_llm_backend | Loading local LLM from: /opt/workspace/localdoc-agent-amd-ai/models/qwen3-1.7b
+2026-06-09 13:10:12,630 | INFO     | localdoc.backends.local_llm_backend | Using AMD ROCm GPU (HIP 7.12.60610-2bd1678d3d) for LLM inference; probe=ok 14.0
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|                                                                                                                                                        | 0/311 [00:00<?, ?it/s]Loading weights:  14%|████████████████████▌                                                                                                                         | 45/311 [00:00<00:00, 449.43it/s]Loading weights:  31%|████████████████████████████████████████████▎                                                                                                 | 97/311 [00:00<00:00, 490.85it/s]Loading weights:  48%|███████████████████████████████████████████████████████████████████▌                                                                         | 149/311 [00:00<00:00, 502.41it/s]Loading weights:  66%|████████████████████████████████████████████████████████████████████████████████████████████▍                                                | 204/311 [00:00<00:00, 519.57it/s]Loading weights:  83%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▉                        | 258/311 [00:00<00:00, 526.32it/s]Loading weights: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 311/311 [00:00<00:00, 519.54it/s]
+2026-06-09 13:10:15,485 | INFO     | localdoc.backends.local_llm_backend | Local LLM loaded in 10.73s (device=cuda, dtype=torch.float16)
+/home/jovyan/.local/lib/python3.12/site-packages/transformers/integrations/sdpa_attention.py:92: UserWarning: Flash Efficient attention on Current AMD GPU is still experimental. Enable it with TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1. (Triggered internally at /__w/rockrel/rockrel/external-builds/pytorch/pytorch/aten/src/ATen/native/transformers/hip/sdp_utils.cpp:309.)
+  attn_output = torch.nn.functional.scaled_dot_product_attention(
+/home/jovyan/.local/lib/python3.12/site-packages/transformers/integrations/sdpa_attention.py:92: UserWarning: Mem Efficient attention on Current AMD GPU is still experimental. Enable it with TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1. (Triggered internally at /__w/rockrel/rockrel/external-builds/pytorch/pytorch/aten/src/ATen/native/transformers/hip/sdp_utils.cpp:360.)
+  attn_output = torch.nn.functional.scaled_dot_product_attention(
+2026-06-09 13:10:18,182 | INFO     | localdoc.generator | 后端生成回答成功 (73 字符)
+2026-06-09 13:10:18,182 | INFO     | localdoc.agent | 查询完成: 13.430s, 来源数 1
+  耗时: 13.432s
+  设备: cuda
+  回答: 异构计算是指在同一个计算系统中同时使用不同类型的处理单元来执行不同类型的任务。它的优势包括提高计算效率、优化资源利用以及支持多种任务类型并行处理。...
+
+✅ 对比结果: /opt/workspace/localdoc-agent-amd-ai/results/rag_mode_comparison.csv
+✅ 阶段分解: /opt/workspace/localdoc-agent-amd-ai/results/rag_stage_breakdown.csv
+[0;32m[信息][0m RAG 模式对比 benchmark 完成。
+
+============================================
+  第 7 步: 生成结果图表
+============================================
+
+============================================================
+  Basic Benchmark Plotting
+============================================================
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/matmul_benchmark.png
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/precision_compare.png
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/mlp_training_curve.png
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/energy_comparison.png
+============================================================
+[0;32m[信息][0m 基础实验图表生成完成。
+============================================================
+  Benchmark Result Plotting
+  Results: /opt/workspace/localdoc-agent-amd-ai/results
+  Figures: /opt/workspace/localdoc-agent-amd-ai/figures
+============================================================
+
+[1/3] Generating latency comparison ...
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/latency_comparison.png
+
+[2/3] Generating backend comparison ...
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/backend_comparison.png
+
+[3/3] Generating resource usage chart ...
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/resource_usage.png
+
+============================================================
+  Plot generation complete.
+  Figures saved in: /opt/workspace/localdoc-agent-amd-ai/figures
+============================================================
+[0;32m[信息][0m 图表生成完成。
+============================================================
+  LLM Benchmark Plotting
+  Local LLM benchmark, not AMD hardware benchmark
+  Results: /opt/workspace/localdoc-agent-amd-ai/results
+  Figures: /opt/workspace/localdoc-agent-amd-ai/figures
+============================================================
+
+[1/3] Generating LLM generation latency chart ...
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/llm_generation_latency.png
+
+[2/3] Generating RAG mode comparison chart ...
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/rag_mode_comparison.png
+
+[3/3] Generating RAG latency breakdown chart ...
+  [saved] /opt/workspace/localdoc-agent-amd-ai/figures/rag_stage_breakdown.png
+
+Plot generation complete.
+[0;32m[信息][0m LLM/RAG 图表生成完成。
+
+============================================
+  实验完成！
+============================================
+
+[0;32m[信息][0m 总耗时: 77 秒
+
+[0;32m[信息][0m 生成的文件:
+
+  📋 results/environment_report.txt
+  📊 results/matmul_benchmark.csv  (10 行)
+  📊 results/precision_compare.csv  (7 行)
+  📊 results/mlp_train_log.csv  (16 行)
+  📊 results/latency_results.csv  (37 行)
+  📊 results/backend_results.csv  (4 行)
+  📊 results/resource_usage.csv  (2 行)
+  📊 results/power_trace.csv  (70 行)
+  📊 results/energy_summary.csv  (2 行)
+  📊 results/vertical_demo_transcript.csv  (5 行)
+  📊 results/llm_generation_benchmark.csv  (4 行)
+  📊 results/rag_mode_comparison.csv  (3 行)
+  📊 results/rag_stage_breakdown.csv  (5 行)
+  🔧 results/rocm_tools_summary.csv  (4.0K)
+  🔧 results/rocm_tuning_recommendations.md  (4.0K)
+  🔧 results/amd_smi_list.txt  (4.0K)
+  🔧 results/amd_smi_static.txt  (4.0K)
+  🔧 results/amd_smi_metric.txt  (4.0K)
+  🔧 results/rocm_smi_performance.txt  (4.0K)
+  🔧 results/rocm_bandwidth_test.txt  (4.0K)
+  🔧 results/rocprofiler_tools.txt  (20K)
+  🔧 results/rocprofiler_run.txt  (4.0K)
+
+  📈 figures/matmul_benchmark.png  (84K)
+  📈 figures/precision_compare.png  (68K)
+  📈 figures/mlp_training_curve.png  (112K)
+  📈 figures/energy_comparison.png  (132K)
+  📈 figures/latency_comparison.png  (156K)
+  📈 figures/backend_comparison.png  (68K)
+  📈 figures/resource_usage.png  (44K)
+  📈 figures/llm_generation_latency.png  (68K)
+  📈 figures/rag_mode_comparison.png  (48K)
+  📈 figures/rag_stage_breakdown.png  (44K)
+
+[0;32m[信息][0m 可使用以下命令查看图表:
+  open /opt/workspace/localdoc-agent-amd-ai/figures/  # macOS
+  xdg-open /opt/workspace/localdoc-agent-amd-ai/figures/  # Linux
+
+
+============================================
+  Step 3/4: 生成实验结果清单
+============================================
+[0;32m[信息][0m 结果清单: /opt/workspace/localdoc-agent-amd-ai/results/experiment_manifest.txt
+[0;32m[信息][0m 完整运行日志: /opt/workspace/localdoc-agent-amd-ai/results/full_experiment_run.log
+
+============================================
+  Step 4/4: 截图清单
+============================================
+截图建议见: /opt/workspace/localdoc-agent-amd-ai/docs/screenshot_checklist.md
+
+# 实验截图清单
+
+本文档用于最后写报告和答辩时截图。建议截图文件名按 `01_环境检查.png`、`02_rocm_smi.png` 这种顺序保存，方便放入 Word。
+
+## 一、必截
+
+1. [必截] 一键全量实验终端结束页
+   - 命令：`bash run_all_experiments.sh --allow-llm-hub --require-llm-gpu`
+   - 截图内容：终端显示“全量实验完成”、`results/full_experiment_run.log`、`results/experiment_manifest.txt`、生成的 CSV 和图表列表。
+
+2. [必截] 环境检查报告
+   - 文件：`results/environment_report.txt`
+   - 截图内容：Python、平台、PyTorch、`torch.version.hip`、`torch.cuda.is_available()`、`ROCm tensor probe ok`、ROCm GPU available、AMD NPU available。
+   - 在 AMD 真机上重点截：GPU 名称、HIP 版本、gfx 架构。
+
+3. [必截] ROCm 原始证据
+   - 文件：`results/rocminfo.txt`、`results/rocm_smi.txt`、`results/hipcc_version.txt`、`results/hipconfig_full.txt`
+   - 截图内容：`rocminfo` 中的 `gfx...`，`rocm-smi` 中的 GPU 名称/功耗/显存，`hipcc` 或 `hipconfig` 中的 ROCm/HIP 版本。
+   - 当前 macOS 环境会显示 `COMMAND NOT FOUND`，这只能作为开发环境说明；最终 AMD 机器上要重新截图。
+
+4. [必截] ROCm 工具性能检测与调优证据
+   - 文件：`results/rocm_tools_summary.csv`、`results/rocm_tuning_recommendations.md`
+   - 同时打开：`results/amd_smi_static.txt`、`results/amd_smi_metric.txt`、`results/rocm_smi_performance.txt`、`results/rocm_bandwidth_test.txt`、`results/rocprofiler_tools.txt`、`results/rocprofiler_run.txt`
+   - 截图内容：AMD SMI / ROCm SMI / Bandwidth Test / rocprofv3 的 `available`、实际命令、输出文件；AMD 真机上重点截 GPU power、temperature、utilization、CPU-GPU bandwidth、profiler trace/summary。
+   - 这项用于回应“使用 ROCm 工具进行性能检测与调优”的要求；如果某个工具不可用，截 `COMMAND NOT FOUND` 或 non-zero 退出原因，报告里写清楚限制。
+
+5. [必截] 矩阵乘法结果图
+   - 文件：`figures/matmul_benchmark.png`
+   - 同时打开：`results/matmul_benchmark.csv`
+   - 截图内容：CPU/Torch CPU/ROCm GPU 的平均耗时、标准差、GFLOPS、speedup。
+
+6. [必截] FP32/FP16 对比图
+   - 文件：`figures/precision_compare.png`
+   - 同时打开：`results/precision_compare.csv`
+   - 截图内容：FP32/FP16 耗时、speedup、最大/平均误差、relative L2 error。
+
+7. [必截] MLP 训练曲线
+   - 文件：`figures/mlp_training_curve.png`
+   - 同时打开：`results/mlp_train_log.csv`
+   - 截图内容：loss 下降、accuracy 上升、epoch time、samples/s。
+
+8. [必截] Agent 后端对比图
+   - 文件：`figures/backend_comparison.png`
+   - 同时打开：`results/backend_results.csv`
+   - 截图内容：`measurement_type`、`is_simulated`、`real_inference`，证明没有把模拟数据写成真实硬件数据。
+
+9. [必截] Agent 延迟趋势图
+   - 文件：`figures/latency_comparison.png`
+   - 同时打开：`results/latency_results.csv`
+   - 截图内容：embedding、query embedding、generation、e2e_rag 四类 benchmark。
+
+10. [必截] 能耗/资源图
+   - 文件：`figures/energy_comparison.png`
+   - 同时打开：`results/energy_summary.csv`
+   - 截图内容：CPU/内存使用率；AMD ROCm 真机上还要截 GPU power 和 estimated energy。
+
+11. [必截] 垂直行业端到端 transcript
+    - 文件：`results/vertical_demo_transcript.csv`
+    - 截图内容：企业内网政策问答的问题、答案、来源、top_score、`ingest_backend_trace`、`query_backend_trace`、`privacy_note`。
+
+12. [必截] 本地 LLM 生成 benchmark
+    - 文件：`results/llm_generation_benchmark.csv`、`figures/llm_generation_latency.png`
+    - 截图内容：模型名称、device、`torch_hip_version`、generation latency、tokens/s。
+    - 如果 device 是 `cuda` 且 `torch_hip_version` 非空，可说明本地 LLM 通过 ROCm PyTorch 在 AMD GPU 上运行；仍需注明这是本地 LLM 推理，不是严格的 NPU benchmark。
+
+13. [必截] RAG 模式对比
+    - 文件：`results/rag_mode_comparison.csv`、`results/rag_stage_breakdown.csv`、`figures/rag_mode_comparison.png`、`figures/rag_stage_breakdown.png`
+    - 截图内容：extractive RAG 与 local LLM RAG 的总耗时、ingest/query 阶段耗时、device 和说明字段。
+
+## 二、建议补截
+
+14. [建议] Gradio Web UI 演示页
+    - 命令：`bash scripts/run_demo_llm.sh`
+    - 截图内容：上传文档、构建知识库、输入问题、返回答案、调度日志。
+
+15. [建议] 项目文件结构
+    - 截图内容：`localdoc/`、`experiments/`、`examples/enterprise_policy/`、`results/`、`figures/`。
+    - 用于说明代码完整性和实验产物组织。
+
+16. [建议] 单元测试结果
+    - 命令：`python -m pytest -q`
+    - 截图内容：`48 passed` 或当前实际通过数量。
+
+## 三、放进报告时的顺序
+
+1. 环境与硬件证据：环境报告、ROCm 原始证据、ROCm 工具检测与调优记录。
+2. 基础异构实验：matmul、FP32/FP16、MLP。
+3. 应用实验：Agent latency、backend comparison、vertical transcript。
+4. 本地 LLM：LLM generation、RAG mode comparison、stage breakdown。
+5. 性能与能效：resource usage、energy summary。
+6. 诚信说明：`measurement_type`、`is_simulated`、`real_inference` 字段截图。
+
+============================================
+  全量实验完成
+============================================
+[0;32m[信息][0m 建议先截图 docs/screenshot_checklist.md 中标为 [必截] 的项目。

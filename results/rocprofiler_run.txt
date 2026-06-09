@@ -1,0 +1,8 @@
+$ rocprofv3 --runtime-trace --kernel-trace --memory-copy-trace --stats --summary --output-format csv --output-directory /opt/workspace/localdoc-agent-amd-ai/results/rocprofv3_probe python /tmp/tmpxx6yuqn8_rocprofv3_probe.py
+# exit_code=2 duration_s=0.032
+# generated_files_under_results:
+(none)
+
+usage: rocprofv3 [options] -- <application> [application options]
+rocprofv3: error: unrecognized arguments: python /tmp/tmpxx6yuqn8_rocprofv3_probe.py
+

@@ -1,1 +1,5 @@
-COMMAND NOT FOUND: hipcc
+HIP version: 7.12.60610-2bd1678d3d
+AMD clang version 22.0.0git (https://github.com/ROCm/llvm-project.git c849bc16b0e49951d313756f20b73c2b28d321d7+PATCHED:9a6ac45c97a1e511db838c5b46257324d2de1780)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /opt/rocm/core-7.12/lib/llvm/bin

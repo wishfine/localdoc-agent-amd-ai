@@ -1,0 +1,1 @@
+COMMAND NOT FOUND: rocm-bandwidth-test or rocm_bandwidth_test

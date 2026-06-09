@@ -1,0 +1,10 @@
+$ amd-smi list
+# exit_code=0 duration_s=0.135
+
+GPU: 0
+    BDF: 0000:c3:00.0
+    UUID: 00ff1586-0000-1000-8000-000000000000
+    KFD_ID: 6490
+    NODE_ID: 1
+    PARTITION_ID: 0
+

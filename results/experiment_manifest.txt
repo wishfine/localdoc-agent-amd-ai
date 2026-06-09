@@ -1,0 +1,87 @@
+LocalDoc Agent full experiment manifest
+Generated at: 2026-06-09 13:10:21
+Command: bash run_all_experiments.sh --allow-llm-hub --require-llm-gpu
+
+[Environment]
+Python: Python 3.12.3
+CWD: /opt/workspace/localdoc-agent-amd-ai
+
+[Key result files]
+OK  results/environment_report.txt
+OK  results/rocminfo.txt
+OK  results/rocm_smi.txt
+OK  results/hipcc_version.txt
+OK  results/hipconfig_full.txt
+OK  results/rocm_tools_summary.csv
+OK  results/rocm_tuning_recommendations.md
+OK  results/amd_smi_list.txt
+OK  results/amd_smi_static.txt
+OK  results/amd_smi_metric.txt
+OK  results/rocm_smi_performance.txt
+OK  results/rocm_bandwidth_test.txt
+OK  results/rocprofiler_tools.txt
+OK  results/rocprofiler_run.txt
+OK  results/matmul_benchmark.csv
+OK  results/precision_compare.csv
+OK  results/mlp_train_log.csv
+OK  results/latency_results.csv
+OK  results/backend_results.csv
+OK  results/resource_usage.csv
+OK  results/power_trace.csv
+OK  results/energy_summary.csv
+OK  results/vertical_demo_transcript.csv
+OK  results/llm_generation_benchmark.csv
+OK  results/rag_mode_comparison.csv
+OK  results/rag_stage_breakdown.csv
+OK  results/full_experiment_run.log
+OK  figures/matmul_benchmark.png
+OK  figures/precision_compare.png
+OK  figures/mlp_training_curve.png
+OK  figures/energy_comparison.png
+OK  figures/latency_comparison.png
+OK  figures/backend_comparison.png
+OK  figures/resource_usage.png
+OK  figures/llm_generation_latency.png
+OK  figures/rag_mode_comparison.png
+OK  figures/rag_stage_breakdown.png
+
+[Git status]
+ M figures/backend_comparison.png
+ M figures/energy_comparison.png
+ M figures/latency_comparison.png
+ M figures/matmul_benchmark.png
+ M figures/mlp_training_curve.png
+ M figures/precision_compare.png
+ M figures/resource_usage.png
+ M results/backend_results.csv
+ M results/energy_summary.csv
+ M results/environment_report.txt
+ M results/hipcc_version.txt
+ M results/hipconfig_full.txt
+ M results/latency_results.csv
+ M results/llm_generation_benchmark.csv
+ M results/matmul_benchmark.csv
+ M results/mlp_train_log.csv
+ M results/power_trace.csv
+ M results/precision_compare.csv
+ M results/resource_usage.csv
+ M results/rocm_smi.txt
+ M results/rocminfo.txt
+ M results/vertical_demo_transcript.csv
+?? core
+?? figures/llm_generation_latency.png
+?? figures/rag_mode_comparison.png
+?? figures/rag_stage_breakdown.png
+?? results/amd_smi_list.txt
+?? results/amd_smi_metric.txt
+?? results/amd_smi_static.txt
+?? results/experiment_manifest.txt
+?? results/full_experiment_run.log
+?? results/rag_mode_comparison.csv
+?? results/rag_stage_breakdown.csv
+?? results/rocm_bandwidth_test.txt
+?? results/rocm_smi_performance.txt
+?? results/rocm_tools_summary.csv
+?? results/rocm_tuning_recommendations.md
+?? results/rocprofiler_run.txt
+?? results/rocprofiler_tools.txt

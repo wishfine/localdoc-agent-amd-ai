@@ -1,5 +1,10 @@
 experiment,backend,device,backend_library,available,measurement_type,size,dtype,repeats,avg_ms,std_ms,min_ms,max_ms,gflops,speedup_vs_cpu,speedup_baseline_backend,torch_version,torch_hip_version,note
-matmul,CPU,numpy_cpu,numpy,True,real_cpu,128,fp32,2,0.0063,0.0008,0.0055,0.0071,662.2393,1.0,CPU,,,Real CPU NumPy matmul
-matmul,ROCm_GPU,cuda,pytorch,False,unavailable,128,fp32,2,,,,,,,,,,PyTorch not installed; ROCm GPU benchmark unavailable
-matmul,CPU,numpy_cpu,numpy,True,real_cpu,256,fp32,2,0.0244,0.0002,0.0242,0.0247,1373.0716,1.0,CPU,,,Real CPU NumPy matmul
-matmul,ROCm_GPU,cuda,pytorch,False,unavailable,256,fp32,2,,,,,,,,,,PyTorch not installed; ROCm GPU benchmark unavailable
+matmul,CPU,numpy_cpu,numpy,True,real_cpu,256,fp32,3,0.1686,0.0315,0.1463,0.2132,198.9596,1.0,CPU,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,Real CPU NumPy matmul
+matmul,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,256,fp32,3,0.0966,0.035,0.0503,0.135,347.5067,1.7466,CPU,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,Real CPU PyTorch matmul
+matmul,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,256,fp32,3,0.1162,0.1135,0.028,0.2764,288.803,0.8311,Torch_CPU,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,Real ROCm GPU matmul via PyTorch HIP
+matmul,CPU,numpy_cpu,numpy,True,real_cpu,512,fp32,3,2.996,0.0199,2.976,3.0232,89.5975,1.0,CPU,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,Real CPU NumPy matmul
+matmul,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,512,fp32,3,65.8259,37.5129,12.8489,94.7452,4.078,0.0455,CPU,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,Real CPU PyTorch matmul
+matmul,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,512,fp32,3,0.2536,0.0234,0.2345,0.2866,1058.6177,259.5948,Torch_CPU,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,Real ROCm GPU matmul via PyTorch HIP
+matmul,CPU,numpy_cpu,numpy,True,real_cpu,1024,fp32,3,32.3618,41.3197,2.9783,90.7964,66.3585,1.0,CPU,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,Real CPU NumPy matmul
+matmul,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,1024,fp32,3,32.362,41.2336,3.1265,90.675,66.3583,1.0,CPU,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,Real CPU PyTorch matmul
+matmul,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,1024,fp32,3,0.81,0.0934,0.7434,0.9421,2651.2475,39.9535,Torch_CPU,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,Real ROCm GPU matmul via PyTorch HIP

@@ -184,3 +184,4 @@ figures/*.png
 
 # Local LLM model files (too large for git)
 models/
+core

@@ -1,2 +1,2 @@
 samples,duration_s,interval_s,rocm_power_samples,avg_gpu_power_w,max_gpu_power_w,estimated_gpu_energy_j,note
-3,2.018,1.0,0,,,,GPU power unavailable; install/use rocm-smi on AMD ROCm hardware.
+69,75.458,1.0,0,,,,GPU power unavailable; install/use rocm-smi on AMD ROCm hardware.

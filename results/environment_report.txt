@@ -1,42 +1,44 @@
 ============================================================
   LocalDoc Agent - 环境检查报告
-  生成时间: 2026-06-03 11:13:46
+  生成时间: 2026-06-09 13:09:06
 ============================================================
 
 ## Python 环境
-  Python 版本: 3.14.5 (main, May 10 2026, 10:21:34) [Clang 21.0.0 (clang-2100.0.123.102)]
-  可执行文件: /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/.venv/bin/python
-  平台: macOS-26.5-arm64-arm-64bit-Mach-O
-  架构: arm64
-  处理器: arm
+  Python 版本: 3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0]
+  可执行文件: /usr/bin/python3
+  平台: Linux-6.14.0-1018-oem-x86_64-with-glibc2.39
+  架构: x86_64
+  处理器: x86_64
 
 ## 内核信息
-  内核版本: 25.5.0
-  Strix Halo 兼容: None
-  ⚠️ Platform is Darwin, not Linux. Strix Halo kernel check skipped.
+  内核版本: 6.14.0-1018-oem
+  Strix Halo 兼容: True
+  ⚠️ Kernel 6.14.0-1018-oem >= 6.14: may work on Ubuntu OEM (>= 6.14.0-1018), but >= 6.17.0 (HWE) or >= 6.18.4 (other) recommended for stability.
 
 ## 内存信息
-  total_memory_mb: 16384
-  available_memory_mb: 3497
-  memory_percent: 78.7
-  cpu_count: 10
+  total_memory_mb: 64069
+  available_memory_mb: 60364
+  memory_percent: 5.8
+  cpu_count: 32
 
 ## PyTorch 环境
-  torch 已安装: False
-  torch 版本: None
+  torch 已安装: True
+  torch 版本: 2.9.1+rocm7.12.0
   torch.version.cuda: None
-  torch.version.hip: None
-  torch.cuda.is_available(): False
-  GPU 名称: None
-  GPU 数量: 0
-  GPU 架构: None
+  torch.version.hip: 7.12.60610-2bd1678d3d
+  torch.cuda.is_available(): True
+  GPU 名称: Radeon 8060S Graphics
+  GPU 数量: 1
+  GPU 架构: (11, 5)
+  ROCm tensor probe ok: True
+  ROCm tensor probe note: ok 14.0
 
 ## ROCm 命令行工具证据
-  rocminfo: False -> /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/results/rocminfo.txt
-  rocm-smi: False -> /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/results/rocm_smi.txt
-  hipcc: False -> /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/results/hipcc_version.txt
-  hipconfig: False -> /Users/wishfine/Documents/异构计算/localdoc-agent-amd-ai/results/hipconfig_full.txt
-  gfx 架构: []
+  rocminfo: True -> /opt/workspace/localdoc-agent-amd-ai/results/rocminfo.txt
+  rocm-smi: True -> /opt/workspace/localdoc-agent-amd-ai/results/rocm_smi.txt
+  hipcc: True -> /opt/workspace/localdoc-agent-amd-ai/results/hipcc_version.txt
+  hipconfig: True -> /opt/workspace/localdoc-agent-amd-ai/results/hipconfig_full.txt
+  gfx 架构: ['gfx11', 'gfx1151']
 
 ## ONNX Runtime 环境
   onnxruntime 已安装: False
@@ -47,16 +49,16 @@
   RyzenAIExecutionProvider: False
 
 ## 结论
-  ROCm GPU available: False
+  ROCm GPU hardware/runtime detected: True
+  ROCm GPU tensor execution available: True
+  ROCm GPU benchmark usable: True
   AMD NPU available: False
-  GPU mode: unavailable
+  GPU mode: real ROCm GPU tensor execution available
   NPU mode: unavailable
-  Current mode: CPU fallback + simulated backend
+  Current mode: real hardware execution
 
 ## 注意事项
   - ROCm 覆盖 GPU 计算，不覆盖 NPU
   - Ryzen APU 上 ROCm 仅支持 PyTorch（不支持 TF/JAX/ONNX）
   - NPU 推理需通过 Ryzen AI SDK 或 Lemonade
   - Strix Halo 需要 kernel >= 6.17.0 (HWE) 或 >= 6.18.4
-
-⚠️ 当前没有检测到真实 AMD GPU/NPU 硬件。所有 GPU/NPU 相关实验数据将为 simulated backend 结果。
