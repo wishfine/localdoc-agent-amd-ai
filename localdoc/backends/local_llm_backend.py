@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from localdoc.backends.cpu_backend import CPUBackend
+from localdoc.backends.rocm_safety import rocm_tensor_probe
 from localdoc.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -131,9 +132,22 @@ class LocalLLMBackend:
             cuda_version = getattr(torch.version, "cuda", None)
 
             if hip_version and torch.cuda.is_available():
-                self._device = "cuda"
-                torch_dtype = torch.float16
-                logger.info("Using AMD ROCm GPU (HIP %s) for LLM inference", hip_version)
+                probe_ok, probe_note = rocm_tensor_probe()
+                if not probe_ok:
+                    self._device = "cpu"
+                    torch_dtype = torch.float32
+                    logger.warning(
+                        "ROCm detected but tensor probe failed; using CPU for LLM inference. %s",
+                        probe_note,
+                    )
+                else:
+                    self._device = "cuda"
+                    torch_dtype = torch.float16
+                    logger.info(
+                        "Using AMD ROCm GPU (HIP %s) for LLM inference; probe=%s",
+                        hip_version,
+                        probe_note,
+                    )
             elif cuda_version and torch.cuda.is_available():
                 self._device = "cuda"
                 torch_dtype = torch.float16
