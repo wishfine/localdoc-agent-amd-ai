@@ -4,15 +4,13 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
-if [ -d "$SCRIPT_DIR/.venv" ]; then
-    source "$SCRIPT_DIR/.venv/bin/activate"
-fi
-
 LLM_ARGS=()
 RAG_ARGS=()
+REQUIRE_GPU=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --require-gpu|--require-llm-gpu)
+            REQUIRE_GPU=1
             export LOCALDOC_REQUIRE_LLM_GPU=1
             LLM_ARGS+=("--require-gpu")
             RAG_ARGS+=("--require-gpu")
@@ -28,6 +26,23 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+if [ -f "$SCRIPT_DIR/scripts/bootstrap_python_env.sh" ]; then
+    # shellcheck disable=SC1091
+    source "$SCRIPT_DIR/scripts/bootstrap_python_env.sh"
+fi
+
+if [ "$REQUIRE_GPU" -eq 1 ]; then
+    if command -v python3 >/dev/null 2>&1; then
+        localdoc_prefer_current_python_for_rocm "python3" "$SCRIPT_DIR" || true
+    fi
+fi
+
+if [ -n "${LOCALDOC_USE_CURRENT_PYTHON:-}" ] && declare -F bootstrap_python_env >/dev/null 2>&1; then
+    bootstrap_python_env "python3" "$SCRIPT_DIR/.venv"
+elif [ -d "$SCRIPT_DIR/.venv" ]; then
+    source "$SCRIPT_DIR/.venv/bin/activate"
+fi
 
 echo "============================================"
 echo "  LocalDoc Agent - LLM Benchmark"

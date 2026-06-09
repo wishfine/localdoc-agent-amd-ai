@@ -22,8 +22,8 @@ usage() {
   bash scripts/setup_llm.sh [--rocm | --cpu | --skip-torch]
 
 说明:
-  --rocm       安装 ROCm 版 PyTorch。默认索引为 https://download.pytorch.org/whl/rocm6.4
-               可用 LOCALDOC_TORCH_ROCM_INDEX_URL 覆盖。
+  --rocm       安装 ROCm 版 PyTorch。必须显式设置 LOCALDOC_TORCH_ROCM_INDEX_URL，
+               避免在 AMD/Jupyter 平台误装与容器不匹配的 ROCm wheel。
   --cpu        安装 CPU 版 PyTorch，用于无 AMD ROCm 的普通环境。
   --skip-torch 只安装不会触发 torch 解析的通用 LLM 依赖，不安装 PyTorch。
 
@@ -31,8 +31,11 @@ usage() {
   为避免在 AMD 平台误装 CUDA 版 PyTorch，未传参数时等同于 --skip-torch。
 
 常用:
-  # AMD ROCm 平台
-  bash scripts/setup_llm.sh --rocm
+  # AMD/Jupyter 平台已有可用 ROCm PyTorch 时
+  LOCALDOC_USE_CURRENT_PYTHON=1 bash scripts/setup_llm.sh --skip-torch
+
+  # 只有明确知道匹配的 ROCm wheel index 时才安装 torch
+  LOCALDOC_TORCH_ROCM_INDEX_URL=<matching-rocm-wheel-index> bash scripts/setup_llm.sh --rocm
 
   # 普通 CPU 环境
   bash scripts/setup_llm.sh --cpu
@@ -147,11 +150,17 @@ pip install --upgrade pip
 
 install_common_deps_without_torch
 
-ROCM_INDEX_URL="${LOCALDOC_TORCH_ROCM_INDEX_URL:-https://download.pytorch.org/whl/rocm6.4}"
+ROCM_INDEX_URL="${LOCALDOC_TORCH_ROCM_INDEX_URL:-}"
 CPU_INDEX_URL="${LOCALDOC_TORCH_CPU_INDEX_URL:-https://download.pytorch.org/whl/cpu}"
 
 case "$TORCH_MODE" in
     rocm)
+        if [ -z "$ROCM_INDEX_URL" ]; then
+            error "--rocm 需要显式设置 LOCALDOC_TORCH_ROCM_INDEX_URL。"
+            error "当前 AMD/Jupyter 平台如已有可用 ROCm PyTorch，推荐改用:"
+            error "  LOCALDOC_USE_CURRENT_PYTHON=1 bash scripts/setup_llm.sh --skip-torch"
+            exit 2
+        fi
         info "安装 ROCm 版 PyTorch: $ROCM_INDEX_URL"
         warn "将先卸载现有 torch/torchvision/torchaudio，避免 CUDA 版残留。"
         pip uninstall -y torch torchvision torchaudio pytorch-triton-rocm triton || true
@@ -165,8 +174,9 @@ case "$TORCH_MODE" in
         pip install --index-url "$CPU_INDEX_URL" torch torchvision torchaudio
         ;;
     skip)
-        warn "未安装 PyTorch。为避免误装 CUDA 版，请显式选择:"
-        warn "  AMD ROCm: bash scripts/setup_llm.sh --rocm"
+        warn "未安装 PyTorch。AMD/Jupyter 平台如已有可用 ROCm PyTorch，这是推荐模式。"
+        warn "如确需安装 torch，请显式选择:"
+        warn "  AMD ROCm: LOCALDOC_TORCH_ROCM_INDEX_URL=<matching-index> bash scripts/setup_llm.sh --rocm"
         warn "  CPU only: bash scripts/setup_llm.sh --cpu"
         ;;
 esac

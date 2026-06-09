@@ -16,10 +16,10 @@
 - 该 LLM 是**可选后端**，不影响默认的 CPU fallback 抽取式回答。
 - 该 LLM **完全本地运行**，不调用任何云端 API。
 - 如果没有真实 AMD GPU/NPU 硬件，模型在 **CPU 上推理**，不代表 GPU/NPU 实测。
-- 该实验只证明"本地 LLM 生成链路可运行"，不声称 AMD GPU/NPU 加速。
+- AMD 实验环境使用 `--require-gpu`，确保 Qwen3-1.7B 必须跑在 ROCm GPU 上；否则直接失败，不写入 GPU LLM 实测。
 - Qwen3 默认开启 thinking mode，本项目关闭它（enable_thinking=False）以保证演示稳定。
 - 不要在 AMD 平台直接运行 `pip install torch` 或 `pip install -r requirements-llm.txt`。后者虽然没有直接写 `torch`，但 `accelerate` 会通过传递依赖拉取默认 PyPI torch，仍可能装成 CUDA 版。
-- 必须通过 `scripts/setup_llm.sh --rocm` 安装；脚本会先从 ROCm wheel 源安装 PyTorch，再安装 `accelerate`。
+- AMD/Jupyter 平台如果已经提供可用 ROCm PyTorch，应复用当前 Python，不要重新安装 torch；只有明确知道匹配的 ROCm wheel index 时才使用 `--rocm`。
 
 ## 安装步骤
 
@@ -28,7 +28,7 @@
 AMD ROCm 平台：
 
 ```bash
-bash scripts/setup_llm.sh --rocm
+LOCALDOC_USE_CURRENT_PYTHON=1 bash scripts/setup_llm.sh --skip-torch
 ```
 
 普通 CPU 环境：
@@ -42,10 +42,10 @@ bash scripts/setup_llm.sh --cpu
 如果已经误装 CUDA 版 PyTorch，运行：
 
 ```bash
-bash scripts/setup_llm.sh --rocm
+LOCALDOC_TORCH_ROCM_INDEX_URL=<matching-rocm-wheel-index> bash scripts/setup_llm.sh --rocm
 ```
 
-脚本会先卸载现有 `torch/torchvision/torchaudio`，并清理 `nvidia-*` CUDA wheel 残留依赖，再从 ROCm wheel 源安装 ROCm 版 PyTorch；如果最终 `torch.version.hip` 为空，脚本会直接报错停止。
+脚本会先卸载现有 `torch/torchvision/torchaudio`，并清理 `nvidia-*` CUDA wheel 残留依赖，再从指定 ROCm wheel 源安装 ROCm 版 PyTorch；如果最终 `torch.version.hip` 为空，脚本会直接报错停止。不要在不确定 wheel index 的情况下重装 torch。
 
 安装后验证：
 
@@ -85,7 +85,7 @@ python -m py_compile localdoc/backends/local_llm_backend.py
 ### 4. 测试模型
 
 ```bash
-python scripts/test_llm.py
+python scripts/test_llm.py --require-gpu
 ```
 
 正常输出应包含：

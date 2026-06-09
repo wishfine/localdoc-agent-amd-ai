@@ -50,6 +50,14 @@ if [ "$PY_MAJOR" -lt 3 ] || ([ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 9 ]); th
 fi
 info "Python 版本检查通过: $PY_VERSION (>= 3.9)"
 
+PRE_REQUIRE_LLM_GPU=0
+for arg in "$@"; do
+    if [ "$arg" = "--require-llm-gpu" ]; then
+        PRE_REQUIRE_LLM_GPU=1
+        break
+    fi
+done
+
 # --- 虚拟环境 ---
 VENV_DIR="$SCRIPT_DIR/.venv"
 
@@ -60,6 +68,9 @@ fi
 
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/scripts/bootstrap_python_env.sh"
+if [ "$PRE_REQUIRE_LLM_GPU" -eq 1 ] && [ -z "${LOCALDOC_USE_CURRENT_PYTHON:-}" ]; then
+    localdoc_prefer_current_python_for_rocm "$PYTHON" "$SCRIPT_DIR" || true
+fi
 bootstrap_python_env "$PYTHON" "$VENV_DIR"
 
 # --- 安装依赖 ---

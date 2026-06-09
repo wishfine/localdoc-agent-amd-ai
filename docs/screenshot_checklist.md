@@ -5,7 +5,7 @@
 ## 一、必截
 
 1. [必截] 一键全量实验终端结束页
-   - 命令：`bash run_all_experiments.sh --allow-llm-hub`
+   - 命令：`bash run_all_experiments.sh --allow-llm-hub --require-llm-gpu`
    - 截图内容：终端显示“全量实验完成”、`results/full_experiment_run.log`、`results/experiment_manifest.txt`、生成的 CSV 和图表列表。
 
 2. [必截] 环境检查报告

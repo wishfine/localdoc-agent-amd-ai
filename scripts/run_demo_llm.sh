@@ -45,6 +45,9 @@ done
 
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/scripts/bootstrap_python_env.sh"
+if [ "$REQUIRE_GPU" -eq 1 ] && [ -z "${LOCALDOC_USE_CURRENT_PYTHON:-}" ]; then
+    localdoc_prefer_current_python_for_rocm "$PYTHON" "$SCRIPT_DIR" || true
+fi
 bootstrap_python_env "$PYTHON" "$SCRIPT_DIR/.venv"
 
 info "检查并安装依赖 ..."

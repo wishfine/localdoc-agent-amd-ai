@@ -16,7 +16,7 @@
 
 ## 运行方式（先看这里）
 
-本项目默认要接入本地 LLM。AMD 平台上按下面顺序执行即可：先安装依赖和 ROCm 版 PyTorch，再下载 Qwen3-1.7B 模型，最后一键跑完所有实验。
+本项目默认要接入本地 LLM。AMD/Jupyter 平台如果已经提供可用的 ROCm PyTorch，优先复用平台 Python，不要在项目 `.venv` 中重新安装另一套 torch。
 
 ### 1. 安装所有依赖并下载本地 LLM
 
@@ -25,10 +25,9 @@ AMD ROCm 平台使用这一组命令：
 ```bash
 cd ~/localdoc-agent-amd-ai
 git pull
-rm -rf .venv
 
-# 安装基础依赖、LLM 依赖、ROCm 版 PyTorch；不要直接 pip install torch 或 pip install -r requirements-llm.txt
-bash scripts/setup_llm.sh --rocm
+# 复用平台已验证的 ROCm Python，只安装通用依赖；不要重装 torch
+LOCALDOC_USE_CURRENT_PYTHON=1 bash scripts/setup_llm.sh --skip-torch
 
 # 下载本地 Qwen3-1.7B 模型到 models/qwen3-1.7b/
 bash scripts/download_llm.sh
@@ -39,6 +38,8 @@ bash scripts/repair_rocm_runtime.sh
 # 验证本地 LLM 必须加载到 ROCm GPU；如果回落 CPU 会直接失败
 python scripts/test_llm.py --require-gpu
 ```
+
+如果 `python scripts/test_llm.py --require-gpu` 已显示 `device=cuda` 和 `ROCm tensor probe ok: True`，就说明当前 `python3` 是正确环境。后续一键实验传 `--require-llm-gpu` 时会自动优先复用这个 Python，避免切到旧 `.venv`。
 
 如果 Hugging Face 下载慢，可先设置镜像后再下载：
 
@@ -236,7 +237,7 @@ git push origin main
 
 ## 命令索引（排错用）
 
-正常情况下只需要执行顶部的三条核心命令：`setup_llm.sh --rocm`、`download_llm.sh`、`run_all_experiments.sh --allow-llm-hub`。下面命令只用于单项排错。
+正常情况下只需要执行顶部的核心命令：`LOCALDOC_USE_CURRENT_PYTHON=1 bash scripts/setup_llm.sh --skip-torch`、`download_llm.sh`、`run_all_experiments.sh --allow-llm-hub --require-llm-gpu`。下面命令只用于单项排错。
 
 | 目标 | 命令 |
 |------|------|
@@ -401,9 +402,11 @@ localdoc-agent-amd-ai/
 
 ## 当前限制说明
 
-1. **ROCm PyTorch 必须装对**：AMD 平台不要直接 `pip install torch`，否则可能装成 CUDA 版。必须用 `bash scripts/setup_llm.sh --rocm` 或按 PyTorch 官方选择 `Linux + Pip + Python + ROCm` 的 wheel。
+1. **ROCm PyTorch 必须装对**：AMD 平台不要直接 `pip install torch`，否则可能装成 CUDA 版；也不要在已有可用 ROCm PyTorch 的 Jupyter 容器里随意重装 torch。
 
-   也不要直接执行 `pip install -r requirements-llm.txt`：`accelerate` 会传递依赖 `torch`，pip 可能先从 PyPI 拉到 CUDA 版 torch。`scripts/setup_llm.sh --rocm` 已改成先装 ROCm torch，再装 `accelerate`。
+   本实验环境已验证 `python3 scripts/test_llm.py --require-gpu` 可用时，应复用当前 Python：`LOCALDOC_USE_CURRENT_PYTHON=1 bash scripts/setup_llm.sh --skip-torch`。只有明确知道与容器匹配的 ROCm wheel index 时，才设置 `LOCALDOC_TORCH_ROCM_INDEX_URL=<matching-index>` 后运行 `bash scripts/setup_llm.sh --rocm`。
+
+   也不要直接执行 `pip install -r requirements-llm.txt`：`accelerate` 会传递依赖 `torch`，pip 可能先从 PyPI 拉到 CUDA 版 torch。
 
 2. **NPU 仍是检测/接口层**：当前 `AMDNPUBackend` 能检测 ONNX Runtime EP，但没有真实 ONNX NPU 推理模型；即使检测到 EP，也会在 benchmark 中标记为 `cpu_fallback_with_hardware_detected`，不会标为 `real_hardware`。
 

@@ -18,6 +18,7 @@ error() { echo -e "${RED}[错误]${NC} $*"; }
 RUN_TESTS=1
 RUN_LLM=1
 ALLOW_LLM_HUB=0
+REQUIRE_LLM_GPU=0
 BENCH_ARGS=()
 ORIGINAL_ARGS="$*"
 
@@ -42,6 +43,7 @@ while [ $# -gt 0 ]; do
             ;;
         --require-llm-gpu)
             RUN_LLM=1
+            REQUIRE_LLM_GPU=1
             BENCH_ARGS+=("--require-llm-gpu")
             shift
             ;;
@@ -85,6 +87,9 @@ fi
 
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/scripts/bootstrap_python_env.sh"
+if [ "$REQUIRE_LLM_GPU" -eq 1 ] && [ -z "${LOCALDOC_USE_CURRENT_PYTHON:-}" ]; then
+    localdoc_prefer_current_python_for_rocm "$PYTHON" "$SCRIPT_DIR" || true
+fi
 bootstrap_python_env "$PYTHON" "$VENV_DIR"
 info "Python: $(python --version)"
 
