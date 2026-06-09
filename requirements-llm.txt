@@ -4,9 +4,11 @@
 # NOT included in the default lightweight requirements.txt
 #
 # Important:
-# Do NOT put torch here. On Linux, plain "pip install torch" can resolve to a
-# CUDA wheel, which is wrong for an AMD ROCm experiment. Install torch with an
-# explicit platform selector instead:
+# Do NOT install this file directly with plain pip on AMD ROCm machines.
+# accelerate depends on torch, so a direct "pip install -r requirements-llm.txt"
+# can still resolve to the default CUDA torch wheel through a transitive
+# dependency. Always use scripts/setup_llm.sh, which installs torch from an
+# explicit ROCm or CPU index before installing accelerate:
 #   AMD ROCm: bash scripts/setup_llm.sh --rocm
 #   CPU only: bash scripts/setup_llm.sh --cpu
 

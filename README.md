@@ -27,7 +27,7 @@ cd ~/localdoc-agent-amd-ai
 git pull
 rm -rf .venv
 
-# 安装基础依赖、LLM 依赖、ROCm 版 PyTorch；会避免误装 CUDA 版 PyTorch
+# 安装基础依赖、LLM 依赖、ROCm 版 PyTorch；不要直接 pip install torch 或 pip install -r requirements-llm.txt
 bash scripts/setup_llm.sh --rocm
 
 # 下载本地 Qwen3-1.7B 模型到 models/qwen3-1.7b/
@@ -377,6 +377,8 @@ localdoc-agent-amd-ai/
 ## 当前限制说明
 
 1. **ROCm PyTorch 必须装对**：AMD 平台不要直接 `pip install torch`，否则可能装成 CUDA 版。必须用 `bash scripts/setup_llm.sh --rocm` 或按 PyTorch 官方选择 `Linux + Pip + Python + ROCm` 的 wheel。
+
+   也不要直接执行 `pip install -r requirements-llm.txt`：`accelerate` 会传递依赖 `torch`，pip 可能先从 PyPI 拉到 CUDA 版 torch。`scripts/setup_llm.sh --rocm` 已改成先装 ROCm torch，再装 `accelerate`。
 
 2. **NPU 仍是检测/接口层**：当前 `AMDNPUBackend` 能检测 ONNX Runtime EP，但没有真实 ONNX NPU 推理模型；即使检测到 EP，也会在 benchmark 中标记为 `cpu_fallback_with_hardware_detected`，不会标为 `real_hardware`。
 

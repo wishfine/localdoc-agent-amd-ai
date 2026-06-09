@@ -18,7 +18,8 @@
 - 如果没有真实 AMD GPU/NPU 硬件，模型在 **CPU 上推理**，不代表 GPU/NPU 实测。
 - 该实验只证明"本地 LLM 生成链路可运行"，不声称 AMD GPU/NPU 加速。
 - Qwen3 默认开启 thinking mode，本项目关闭它（enable_thinking=False）以保证演示稳定。
-- `requirements-llm.txt` 不包含 `torch`。AMD 平台不能直接 `pip install torch`，否则可能安装成 CUDA 版 PyTorch。
+- 不要在 AMD 平台直接运行 `pip install torch` 或 `pip install -r requirements-llm.txt`。后者虽然没有直接写 `torch`，但 `accelerate` 会通过传递依赖拉取默认 PyPI torch，仍可能装成 CUDA 版。
+- 必须通过 `scripts/setup_llm.sh --rocm` 安装；脚本会先从 ROCm wheel 源安装 PyTorch，再安装 `accelerate`。
 
 ## 安装步骤
 
@@ -36,7 +37,7 @@ bash scripts/setup_llm.sh --rocm
 bash scripts/setup_llm.sh --cpu
 ```
 
-默认不传参数时，`setup_llm.sh` 只安装通用 LLM 依赖，不安装 PyTorch。这样可以避免在 AMD 平台误装 CUDA 版 PyTorch。
+默认不传参数时，`setup_llm.sh` 只安装不会触发 torch 解析的通用 LLM 依赖；`accelerate` 会用 `--no-deps` 安装，避免它自动拉取 PyPI 默认 torch。
 
 如果已经误装 CUDA 版 PyTorch，运行：
 
@@ -44,7 +45,7 @@ bash scripts/setup_llm.sh --cpu
 bash scripts/setup_llm.sh --rocm
 ```
 
-脚本会先卸载现有 `torch/torchvision/torchaudio`，并清理 `nvidia-*` CUDA wheel 残留依赖，再安装 ROCm 版 PyTorch。
+脚本会先卸载现有 `torch/torchvision/torchaudio`，并清理 `nvidia-*` CUDA wheel 残留依赖，再从 ROCm wheel 源安装 ROCm 版 PyTorch；如果最终 `torch.version.hip` 为空，脚本会直接报错停止。
 
 安装后验证：
 
