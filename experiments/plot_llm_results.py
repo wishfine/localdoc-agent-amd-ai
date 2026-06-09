@@ -11,28 +11,22 @@ Output:
 """
 
 import csv
+import argparse
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "results"
 FIGURES_DIR = PROJECT_ROOT / "figures"
 
 
-def _setup_chinese_font():
-    preferred = ["SimHei", "WenQuanYi Micro Hei", "Noto Sans CJK SC",
-                 "Microsoft YaHei", "PingFang SC", "STHeiti", "Arial Unicode MS"]
-    available = {f.name for f in fm.fontManager.ttflist}
-    for name in preferred:
-        if name in available:
-            plt.rcParams["font.sans-serif"] = [name, "DejaVu Sans"]
-            plt.rcParams["axes.unicode_minus"] = False
-            return
+def _setup_plot_style() -> None:
+    plt.rcParams["font.sans-serif"] = ["DejaVu Sans"]
+    plt.rcParams["axes.unicode_minus"] = False
 
 
 def _read_csv(filename: str) -> List[Dict[str, Any]]:
@@ -59,7 +53,7 @@ def _read_csv(filename: str) -> List[Dict[str, Any]]:
 def plot_llm_generation_latency(output_path: Optional[Path] = None) -> Optional[Path]:
     rows = _read_csv("llm_generation_benchmark.csv")
     if not rows or all(r.get("query_id") == "SKIPPED" for r in rows):
-        print("  [跳过] llm_generation_benchmark.csv 无数据")
+        print("  [skip] llm_generation_benchmark.csv has no data")
         return None
 
     # Filter out SKIPPED rows
@@ -67,7 +61,7 @@ def plot_llm_generation_latency(output_path: Optional[Path] = None) -> Optional[
     if not data:
         return None
 
-    fig, ax = plt.subplots(figsize=(10, 5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(10, 5))
     fig.suptitle(
         "Local LLM Generation Latency (Qwen3-1.7B)\n"
         "Local LLM benchmark, not AMD GPU/NPU hardware benchmark",
@@ -103,21 +97,21 @@ def plot_llm_generation_latency(output_path: Optional[Path] = None) -> Optional[
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  [保存] {out}")
+    print(f"  [saved] {out}")
     return out
 
 
 def plot_rag_mode_comparison(output_path: Optional[Path] = None) -> Optional[Path]:
     rows = _read_csv("rag_mode_comparison.csv")
     if not rows:
-        print("  [跳过] rag_mode_comparison.csv 无数据")
+        print("  [skip] rag_mode_comparison.csv has no data")
         return None
 
     data = [r for r in rows if r.get("total_time_s") != "SKIPPED"]
     if not data:
         return None
 
-    fig, ax = plt.subplots(figsize=(8, 5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(8, 5))
     fig.suptitle(
         "RAG Mode Comparison (Extractive vs Local LLM)\n"
         "Local LLM benchmark, not AMD GPU/NPU hardware benchmark",
@@ -143,21 +137,21 @@ def plot_rag_mode_comparison(output_path: Optional[Path] = None) -> Optional[Pat
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  [保存] {out}")
+    print(f"  [saved] {out}")
     return out
 
 
 def plot_rag_stage_breakdown(output_path: Optional[Path] = None) -> Optional[Path]:
     rows = _read_csv("rag_stage_breakdown.csv")
     if not rows:
-        print("  [跳过] rag_stage_breakdown.csv 无数据")
+        print("  [skip] rag_stage_breakdown.csv has no data")
         return None
 
     data = [r for r in rows if r.get("time_s") != "SKIPPED"]
     if not data:
         return None
 
-    fig, ax = plt.subplots(figsize=(8, 5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(8, 5))
     fig.suptitle(
         "RAG Coarse Latency Breakdown (ingest / query)\n"
         "Local LLM benchmark, not AMD GPU/NPU hardware benchmark",
@@ -188,29 +182,43 @@ def plot_rag_stage_breakdown(output_path: Optional[Path] = None) -> Optional[Pat
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  [保存] {out}")
+    print(f"  [saved] {out}")
     return out
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate local LLM benchmark charts")
+    parser.add_argument("--results-dir", type=str, default=str(RESULTS_DIR))
+    parser.add_argument("--figures-dir", type=str, default=str(FIGURES_DIR))
+    return parser.parse_args()
+
+
 def main():
+    global RESULTS_DIR, FIGURES_DIR
+    args = parse_args()
+    RESULTS_DIR = Path(args.results_dir)
+    FIGURES_DIR = Path(args.figures_dir)
+
     print("=" * 60)
-    print("  LLM Benchmark 结果绘图")
-    print("  ⚠️ Local LLM benchmark, not AMD hardware benchmark")
+    print("  LLM Benchmark Plotting")
+    print("  Local LLM benchmark, not AMD hardware benchmark")
+    print(f"  Results: {RESULTS_DIR}")
+    print(f"  Figures: {FIGURES_DIR}")
     print("=" * 60)
 
-    _setup_chinese_font()
+    _setup_plot_style()
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("\n[1/3] 生成 LLM 生成延迟图 ...")
+    print("\n[1/3] Generating LLM generation latency chart ...")
     plot_llm_generation_latency()
 
-    print("\n[2/3] 生成 RAG 模式对比图 ...")
+    print("\n[2/3] Generating RAG mode comparison chart ...")
     plot_rag_mode_comparison()
 
-    print("\n[3/3] 生成 RAG 粗粒度延迟分解图 ...")
+    print("\n[3/3] Generating RAG latency breakdown chart ...")
     plot_rag_stage_breakdown()
 
-    print("\n图表生成完成！")
+    print("\nPlot generation complete.")
 
 
 if __name__ == "__main__":

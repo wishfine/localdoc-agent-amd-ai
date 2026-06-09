@@ -21,7 +21,6 @@ from typing import Any, Dict, List, Optional
 import matplotlib
 matplotlib.use("Agg")
 
-import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -35,19 +34,10 @@ BACKEND_COLORS = {
 }
 
 
-def _setup_chinese_font() -> None:
-    preferred_fonts = [
-        "SimHei", "WenQuanYi Micro Hei", "Noto Sans CJK SC",
-        "Microsoft YaHei", "PingFang SC", "STHeiti", "Arial Unicode MS",
-    ]
-    available = {f.name for f in fm.fontManager.ttflist}
-    for font_name in preferred_fonts:
-        if font_name in available:
-            plt.rcParams["font.sans-serif"] = [font_name, "DejaVu Sans"]
-            plt.rcParams["axes.unicode_minus"] = False
-            print(f"  [字体] 使用中文字体: {font_name}")
-            return
-    print("  [字体] 警告: 未找到中文字体，中文字符可能无法正常显示。")
+def _setup_plot_style() -> None:
+    """Use ASCII-only labels so headless Linux containers do not need CJK fonts."""
+    plt.rcParams["font.sans-serif"] = ["DejaVu Sans"]
+    plt.rcParams["axes.unicode_minus"] = False
 
 
 def _convert(value: str) -> Any:
@@ -67,7 +57,7 @@ def _convert(value: str) -> Any:
 def _read_csv(filename: str) -> List[Dict[str, Any]]:
     path = RESULTS_DIR / filename
     if not path.exists():
-        print(f"  [跳过] 文件不存在: {path}")
+        print(f"  [skip] Missing file: {path}")
         return []
     with path.open("r", encoding="utf-8") as f:
         return [{k: _convert(v) for k, v in row.items()} for row in csv.DictReader(f)]
@@ -83,7 +73,7 @@ def plot_matmul(output_path: Optional[Path] = None) -> Optional[Path]:
         return None
 
     fig, ax = plt.subplots(figsize=(9, 5), constrained_layout=True)
-    fig.suptitle("矩阵乘法 Benchmark (FP32)", fontsize=15, fontweight="bold")
+    fig.suptitle("Matrix Multiplication Benchmark (FP32)", fontsize=15, fontweight="bold")
     for backend in sorted({r["backend"] for r in rows}):
         data = sorted([r for r in rows if r["backend"] == backend], key=lambda r: r["size"])
         ax.plot(
@@ -94,15 +84,15 @@ def plot_matmul(output_path: Optional[Path] = None) -> Optional[Path]:
             linewidth=2,
             color=BACKEND_COLORS.get(backend),
         )
-    ax.set_xlabel("矩阵规模 N (N x N)")
-    ax.set_ylabel("平均耗时 (ms)")
+    ax.set_xlabel("Matrix size N (N x N)")
+    ax.set_ylabel("Average latency (ms)")
     ax.grid(True, alpha=0.3)
     ax.legend()
     out = output_path or (FIGURES_DIR / "matmul_benchmark.png")
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  [保存] {out}")
+    print(f"  [saved] {out}")
     return out
 
 
@@ -112,7 +102,7 @@ def plot_precision(output_path: Optional[Path] = None) -> Optional[Path]:
         return None
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=True)
-    fig.suptitle("FP32 / FP16 性能与误差对比", fontsize=15, fontweight="bold")
+    fig.suptitle("FP32 / FP16 Performance and Error", fontsize=15, fontweight="bold")
 
     labels = [f"{r['backend']}\nN={r['size']}" for r in rows]
     x = list(range(len(rows)))
@@ -121,12 +111,12 @@ def plot_precision(output_path: Optional[Path] = None) -> Optional[Path]:
     axes[0].bar([i + width / 2 for i in x], [r["fp16_ms"] for r in rows], width, label="FP16", color="#f28e2b")
     axes[0].set_xticks(x)
     axes[0].set_xticklabels(labels, rotation=20, ha="right")
-    axes[0].set_ylabel("平均耗时 (ms)")
+    axes[0].set_ylabel("Average latency (ms)")
     axes[0].grid(axis="y", alpha=0.3)
     axes[0].legend()
 
     axes[1].bar(labels, [r["mean_abs_error"] for r in rows], color="#e15759")
-    axes[1].set_ylabel("平均绝对误差")
+    axes[1].set_ylabel("Mean absolute error")
     axes[1].set_yscale("log")
     axes[1].grid(axis="y", alpha=0.3)
     axes[1].tick_params(axis="x", labelrotation=20)
@@ -135,7 +125,7 @@ def plot_precision(output_path: Optional[Path] = None) -> Optional[Path]:
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  [保存] {out}")
+    print(f"  [saved] {out}")
     return out
 
 
@@ -146,7 +136,7 @@ def plot_mlp(output_path: Optional[Path] = None) -> Optional[Path]:
         return None
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=True)
-    fig.suptitle("MLP 单卡训练曲线", fontsize=15, fontweight="bold")
+    fig.suptitle("Single-device MLP Training Curve", fontsize=15, fontweight="bold")
 
     for backend in sorted({r["backend"] for r in rows}):
         data = sorted([r for r in rows if r["backend"] == backend], key=lambda r: r["epoch"])
@@ -169,7 +159,7 @@ def plot_mlp(output_path: Optional[Path] = None) -> Optional[Path]:
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  [保存] {out}")
+    print(f"  [saved] {out}")
     return out
 
 
@@ -179,12 +169,12 @@ def plot_energy(output_path: Optional[Path] = None) -> Optional[Path]:
         return None
 
     fig, ax1 = plt.subplots(figsize=(10, 5), constrained_layout=True)
-    fig.suptitle("资源与能效采样", fontsize=15, fontweight="bold")
+    fig.suptitle("Resource and Energy Sampling", fontsize=15, fontweight="bold")
     x = [r.get("elapsed_s", 0) for r in rows]
     cpu = [r.get("cpu_percent", 0) if r.get("cpu_percent", "") != "" else 0 for r in rows]
     mem = [r.get("memory_percent", 0) if r.get("memory_percent", "") != "" else 0 for r in rows]
-    ax1.plot(x, cpu, "o-", label="CPU 使用率 (%)", color="#4e79a7")
-    ax1.plot(x, mem, "o-", label="内存使用率 (%)", color="#76b7b2")
+    ax1.plot(x, cpu, "o-", label="CPU utilization (%)", color="#4e79a7")
+    ax1.plot(x, mem, "o-", label="Memory utilization (%)", color="#76b7b2")
     ax1.set_xlabel("Elapsed (s)")
     ax1.set_ylabel("CPU / Memory (%)")
     ax1.grid(True, alpha=0.3)
@@ -213,7 +203,7 @@ def plot_energy(output_path: Optional[Path] = None) -> Optional[Path]:
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  [保存] {out}")
+    print(f"  [saved] {out}")
     return out
 
 
@@ -233,9 +223,9 @@ def main(argv: Optional[List[str]] = None) -> None:
         FIGURES_DIR = Path(args.figures_dir)
 
     print("=" * 60)
-    print("  基础实验结果绘图")
+    print("  Basic Benchmark Plotting")
     print("=" * 60)
-    _setup_chinese_font()
+    _setup_plot_style()
     plot_matmul()
     plot_precision()
     plot_mlp()

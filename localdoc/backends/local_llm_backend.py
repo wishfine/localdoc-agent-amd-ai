@@ -286,13 +286,23 @@ class LocalLLMBackend:
 
         is_rocm = bool(hip_version and cuda_available)
         is_cuda = bool(cuda_version and cuda_available)
+        rocm_probe_ok = False
+        rocm_probe_note = ""
+        if is_rocm:
+            rocm_probe_ok, rocm_probe_note = rocm_tensor_probe()
 
         # Determine hardware note
-        if is_rocm:
+        if is_rocm and rocm_probe_ok:
             hardware_note = (
                 "AMD ROCm runtime detected (HIP %s); "
+                "ROCm tensor execution is available. "
                 "LLM benchmark is local inference only, not strict AMD hardware benchmark."
                 % hip_version
+            )
+        elif is_rocm:
+            hardware_note = (
+                "AMD ROCm runtime detected (HIP %s), but ROCm tensor probe failed; "
+                "LLM inference uses CPU fallback. %s" % (hip_version, rocm_probe_note)
             )
         elif is_cuda:
             hardware_note = "CUDA GPU detected (not AMD ROCm); not AMD hardware benchmark"
@@ -313,6 +323,8 @@ class LocalLLMBackend:
             "is_local_llm": True,
             "is_amd_hardware_benchmark": False,
             "is_rocm_runtime_detected": is_rocm,
+            "rocm_tensor_probe_ok": rocm_probe_ok,
+            "rocm_tensor_probe_note": rocm_probe_note,
             "is_cuda_runtime_detected": is_cuda,
             "torch_cuda_available": cuda_available,
             "torch_hip_version": hip_version,

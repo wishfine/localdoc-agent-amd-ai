@@ -88,6 +88,7 @@ def main():
             writer.writerow([
                 "query_id", "query", "model_name", "model_id", "device",
                 "torch_cuda_available", "torch_hip_version",
+                "rocm_tensor_probe_ok", "rocm_tensor_probe_note",
                 "model_load_time_s", "generation_time_s",
                 "input_chars", "output_chars", "input_tokens", "output_tokens",
                 "tokens_per_second", "memory_before_mb", "memory_after_mb",
@@ -96,8 +97,8 @@ def main():
             ])
             writer.writerow([
                 "SKIPPED", "Model not found", Path(args.model_id).name, args.model_id,
-                "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A",
-                "N/A", "N/A", "N/A", True, False, False,
+                "N/A", "N/A", "N/A", False, "N/A", "N/A", "N/A", "N/A", "N/A",
+                "N/A", "N/A", "N/A", "N/A", "N/A", True, False, False,
                 "Model not found. Skipped. Not AMD hardware benchmark.",
             ])
         print(f"\n已写入: {csv_path}")
@@ -143,6 +144,8 @@ def main():
             "device": info_after["device"],
             "torch_cuda_available": info_after["torch_cuda_available"],
             "torch_hip_version": info_after["torch_hip_version"] or "N/A",
+            "rocm_tensor_probe_ok": info_after.get("rocm_tensor_probe_ok", False),
+            "rocm_tensor_probe_note": info_after.get("rocm_tensor_probe_note", ""),
             "model_load_time_s": info_after["load_time_s"],
             "generation_time_s": round(gen_time, 3),
             "input_chars": input_chars,

@@ -68,6 +68,16 @@ pip install --quiet --upgrade pip
 pip install --quiet numpy matplotlib psutil 2>/dev/null || warn "部分依赖安装失败"
 info "依赖安装完成。"
 
+# --- ROCm runtime sanity repair ---
+if [ -f "$SCRIPT_DIR/scripts/repair_rocm_runtime.sh" ]; then
+    info "检查 ROCm runtime 辅助文件并执行最小 tensor probe ..."
+    if bash "$SCRIPT_DIR/scripts/repair_rocm_runtime.sh"; then
+        info "ROCm runtime 检查完成。"
+    else
+        warn "ROCm runtime 检查脚本未通过，后续实验会按 unavailable/fallback 标记。"
+    fi
+fi
+
 # --- 创建目录 ---
 mkdir -p "$SCRIPT_DIR/results"
 mkdir -p "$SCRIPT_DIR/figures"
