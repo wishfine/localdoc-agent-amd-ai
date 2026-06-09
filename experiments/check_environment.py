@@ -227,9 +227,12 @@ def check_onnxruntime() -> dict:
 
 
 def determine_conclusion(torch_info: dict, ort_info: dict, kernel_info: dict) -> dict:
-    rocm_available = (
+    rocm_hardware_detected = (
         torch_info.get("hip_version") is not None
         and torch_info.get("cuda_available", False)
+    )
+    rocm_tensor_available = (
+        rocm_hardware_detected
         and torch_info.get("rocm_tensor_probe_ok", False)
     )
     npu_available = (
@@ -238,10 +241,10 @@ def determine_conclusion(torch_info: dict, ort_info: dict, kernel_info: dict) ->
         or ort_info.get("directml_available", False)
     )
 
-    if rocm_available:
-        gpu_mode = "real ROCm GPU"
-    elif torch_info.get("hip_version") and torch_info.get("cuda_available"):
-        gpu_mode = "ROCm detected but tensor probe failed"
+    if rocm_tensor_available:
+        gpu_mode = "real ROCm GPU tensor execution available"
+    elif rocm_hardware_detected:
+        gpu_mode = "ROCm GPU hardware/runtime detected, but tensor execution failed"
     elif torch_info.get("cuda_available"):
         gpu_mode = "CUDA GPU (not AMD ROCm)"
     else:
@@ -252,13 +255,17 @@ def determine_conclusion(torch_info: dict, ort_info: dict, kernel_info: dict) ->
     else:
         npu_mode = "unavailable"
 
-    if rocm_available or npu_available:
-        current_mode = "real hardware"
+    if rocm_tensor_available or npu_available:
+        current_mode = "real hardware execution"
+    elif rocm_hardware_detected:
+        current_mode = "ROCm hardware detected but CPU fallback for experiments"
     else:
         current_mode = "CPU fallback + simulated backend"
 
     return {
-        "rocm_gpu_available": rocm_available,
+        "rocm_gpu_hardware_detected": rocm_hardware_detected,
+        "rocm_gpu_tensor_available": rocm_tensor_available,
+        "rocm_gpu_available": rocm_tensor_available,
         "amd_npu_available": npu_available,
         "gpu_mode": gpu_mode,
         "npu_mode": npu_mode,
@@ -337,7 +344,9 @@ def main():
         f"  RyzenAIExecutionProvider: {ort_info.get('ryzenai_available', False)}",
         "",
         "## 结论",
-        f"  ROCm GPU available: {conclusion['rocm_gpu_available']}",
+        f"  ROCm GPU hardware/runtime detected: {conclusion['rocm_gpu_hardware_detected']}",
+        f"  ROCm GPU tensor execution available: {conclusion['rocm_gpu_tensor_available']}",
+        f"  ROCm GPU benchmark usable: {conclusion['rocm_gpu_available']}",
         f"  AMD NPU available: {conclusion['amd_npu_available']}",
         f"  GPU mode: {conclusion['gpu_mode']}",
         f"  NPU mode: {conclusion['npu_mode']}",
@@ -355,6 +364,12 @@ def main():
         lines.append(
             "⚠️ 当前没有检测到真实 AMD GPU/NPU 硬件。"
             "所有 GPU/NPU 相关实验数据将为 simulated backend 结果。"
+        )
+    elif conclusion["current_mode"] == "ROCm hardware detected but CPU fallback for experiments":
+        lines.append(
+            "⚠️ 已检测到 AMD ROCm GPU 硬件和 PyTorch HIP 运行时，"
+            "但最小 tensor 执行探针失败。当前实验会禁用真实 GPU benchmark，"
+            "GPU 行只能写 unavailable/CPU fallback，不能写成 real_rocm_gpu。"
         )
 
     report = "\n".join(lines)

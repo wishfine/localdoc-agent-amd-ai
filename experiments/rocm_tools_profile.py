@@ -545,7 +545,13 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     print(f"  [saved] {summary_path}")
     print(f"  [saved] {notes_path}")
     for row in rows:
-        status = "OK" if row["available"] else "MISS"
+        exit_code = str(row.get("exit_code", ""))
+        if not row["available"]:
+            status = "MISS"
+        elif exit_code in ("", "0"):
+            status = "OK"
+        else:
+            status = "FAIL"
         print(f"  [{status}] {row['tool']}: {row['output_file']}")
     return 0
 
