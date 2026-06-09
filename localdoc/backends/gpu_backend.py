@@ -37,6 +37,7 @@ import re
 from collections import Counter
 from typing import List, Optional, Dict, Any
 
+from localdoc.backends.rocm_safety import is_gpu_backend_disabled, rocm_tensor_probe
 from localdoc.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -82,6 +83,12 @@ class AMDGPUBackend:
             return
         self._init_attempted = True
 
+        if is_gpu_backend_disabled():
+            logger.info(
+                "AMD GPU 后端：LOCALDOC_DISABLE_GPU_BACKEND=1，跳过真实 GPU 初始化。"
+            )
+            return
+
         try:
             import torch  # 延迟导入，避免模块加载时的开销
             self._torch = torch
@@ -112,6 +119,16 @@ class AMDGPUBackend:
             self._device = "cuda"  # PyTorch 通过 CUDA API 统一访问 HIP 设备
             gpu_name = torch.cuda.get_device_name(0)
             logger.info("AMD GPU 后端：GPU 可用 - %s", gpu_name)
+            probe_ok, probe_note = rocm_tensor_probe()
+            if not probe_ok:
+                logger.warning(
+                    "AMD GPU 后端：ROCm tensor 探针失败，禁用 GPU 后端并回退 CPU。%s",
+                    probe_note,
+                )
+                self._device = None
+                self._hip_available = False
+                return
+            logger.info("AMD GPU 后端：ROCm tensor 探针通过 - %s", probe_note)
         else:
             logger.warning(
                 "AMD GPU 后端：已检测到 HIP 后端，但无可用 GPU 设备。"

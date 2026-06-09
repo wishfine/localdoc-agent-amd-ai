@@ -19,6 +19,8 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 
+from localdoc.backends.rocm_safety import rocm_tensor_probe
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "results"
 
@@ -125,6 +127,8 @@ def check_torch() -> dict:
         "gpu_name": None,
         "gpu_count": 0,
         "gpu_arch": None,
+        "rocm_tensor_probe_ok": False,
+        "rocm_tensor_probe_note": "",
     }
     try:
         import torch
@@ -140,6 +144,10 @@ def check_torch() -> dict:
                 result["gpu_arch"] = torch.cuda.get_device_capability(0)
             except Exception:
                 pass
+        if result["hip_version"] and result["cuda_available"]:
+            probe_ok, probe_note = rocm_tensor_probe()
+            result["rocm_tensor_probe_ok"] = probe_ok
+            result["rocm_tensor_probe_note"] = probe_note
     except ImportError:
         pass
     return result
@@ -220,6 +228,7 @@ def determine_conclusion(torch_info: dict, ort_info: dict, kernel_info: dict) ->
     rocm_available = (
         torch_info.get("hip_version") is not None
         and torch_info.get("cuda_available", False)
+        and torch_info.get("rocm_tensor_probe_ok", False)
     )
     npu_available = (
         ort_info.get("vitisai_available", False)
@@ -229,6 +238,8 @@ def determine_conclusion(torch_info: dict, ort_info: dict, kernel_info: dict) ->
 
     if rocm_available:
         gpu_mode = "real ROCm GPU"
+    elif torch_info.get("hip_version") and torch_info.get("cuda_available"):
+        gpu_mode = "ROCm detected but tensor probe failed"
     elif torch_info.get("cuda_available"):
         gpu_mode = "CUDA GPU (not AMD ROCm)"
     else:
@@ -305,6 +316,8 @@ def main():
         f"  GPU 名称: {torch_info['gpu_name']}",
         f"  GPU 数量: {torch_info['gpu_count']}",
         f"  GPU 架构: {torch_info['gpu_arch']}",
+        f"  ROCm tensor probe ok: {torch_info['rocm_tensor_probe_ok']}",
+        f"  ROCm tensor probe note: {torch_info['rocm_tensor_probe_note']}",
         "",
         "## ROCm 命令行工具证据",
         f"  rocminfo: {rocm_tools['rocminfo_available']} -> {rocm_tools['tools']['rocminfo']['output_file']}",

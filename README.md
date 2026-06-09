@@ -104,13 +104,14 @@ grep "ROCm_GPU" results/mlp_train_log.csv
 head results/llm_generation_benchmark.csv
 head results/rocm_tools_summary.csv
 sed -n '1,160p' results/rocm_tuning_recommendations.md
+grep "ROCm tensor probe" results/environment_report.txt
 ```
 
 判定规则：
 
 | `torch.version.hip` | `torch.version.cuda` | 能否写 AMD ROCm 实测 |
 |---------------------|----------------------|----------------------|
-| 非空 | 通常为空 | 可以，CSV 应出现 `measurement_type=real_rocm_gpu` |
+| 非空 | 通常为空 | 还需要 `ROCm tensor probe ok: True`，CSV 才能写 `measurement_type=real_rocm_gpu` |
 | 空 | 非空 | 不可以，这是 CUDA 版 PyTorch，装错了 |
 | 空 | 空 | 不可以，只能作为 CPU baseline |
 
@@ -206,7 +207,7 @@ git push origin main
 | Backend | 当前状态 | 含义 |
 |---------|----------|------|
 | CPUBackend | 真实，始终可用 | 真实 CPU 执行，本项目默认后端 |
-| AMDGPUBackend | 需 ROCm PyTorch | ROCm 工具存在不等于 PyTorch-HIP 可用；需 `torch.version.hip` 非空且 `torch.cuda.is_available()` 为 True |
+| AMDGPUBackend | 需 ROCm PyTorch | ROCm 工具存在不等于 PyTorch-HIP 可用；需 `torch.version.hip` 非空、`torch.cuda.is_available()` 为 True，且 ROCm tensor 子进程探针通过 |
 | AMDNPUBackend | 检测/接口层 | 当前仅检测 Ryzen AI / ONNX EP；未接入真实 ONNX NPU 推理模型 |
 | SimulatedNPUBackend | 仅仿真 | 仅用于演示，不产生真实硬件结果 |
 

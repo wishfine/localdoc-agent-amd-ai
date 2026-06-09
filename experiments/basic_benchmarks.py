@@ -21,6 +21,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from localdoc.backends.rocm_safety import rocm_tensor_probe
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "results"
 
@@ -37,7 +39,10 @@ def _rocm_available(torch_mod) -> bool:
     if torch_mod is None:
         return False
     hip_version = getattr(torch_mod.version, "hip", None)
-    return bool(hip_version and torch_mod.cuda.is_available())
+    if not (hip_version and torch_mod.cuda.is_available()):
+        return False
+    probe_ok, _ = rocm_tensor_probe()
+    return probe_ok
 
 
 def _rocm_note(torch_mod) -> str:
@@ -48,6 +53,9 @@ def _rocm_note(torch_mod) -> str:
         return "PyTorch installed but torch.version.hip is empty; not a ROCm build"
     if not torch_mod.cuda.is_available():
         return "ROCm PyTorch detected but torch.cuda.is_available() is False"
+    probe_ok, probe_note = rocm_tensor_probe()
+    if not probe_ok:
+        return f"ROCm PyTorch detected but tensor probe failed; GPU benchmark disabled. {probe_note}"
     return "ROCm GPU available"
 
 

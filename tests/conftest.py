@@ -6,6 +6,11 @@ import os
 # Ensure the project root is on the path so `import localdoc` works
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+# Unit tests validate backend API consistency, not real ROCm execution. Real GPU
+# benchmarking is covered by experiments/basic_benchmarks.py after a subprocess
+# tensor probe, so pytest should not trigger native ROCm tensor operations.
+os.environ.setdefault("LOCALDOC_DISABLE_GPU_BACKEND", "1")
+
 import pytest
 
 

@@ -10,7 +10,7 @@
 
 2. [必截] 环境检查报告
    - 文件：`results/environment_report.txt`
-   - 截图内容：Python、平台、PyTorch、`torch.version.hip`、`torch.cuda.is_available()`、ROCm GPU available、AMD NPU available。
+   - 截图内容：Python、平台、PyTorch、`torch.version.hip`、`torch.cuda.is_available()`、`ROCm tensor probe ok`、ROCm GPU available、AMD NPU available。
    - 在 AMD 真机上重点截：GPU 名称、HIP 版本、gfx 架构。
 
 3. [必截] ROCm 原始证据
