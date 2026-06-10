@@ -78,7 +78,7 @@ BACKEND_LABELS = {
     "CPU": "CPU",
     "GPU": "GPU",
     "NPU": "NPU",
-    "SimulatedNPU": "Simulated NPU",
+    "SimulatedNPU": "Simulated NPU (simulated)",
 }
 
 
@@ -124,14 +124,24 @@ def plot_latency_comparison(
             )
             x = [r.get(xkey, 0) for r in data]
             y = [r["latency_ms"] for r in data]
-            ax.plot(x, y, "o-", label=BACKEND_LABELS.get(backend, backend),
-                    color=BACKEND_COLORS.get(backend, None), linewidth=2, markersize=6)
+            is_simulated = any(str(r.get("is_simulated", "")).lower() == "true" for r in data)
+            ax.plot(
+                x, y,
+                "o--" if is_simulated else "o-",
+                label=BACKEND_LABELS.get(backend, backend),
+                color=BACKEND_COLORS.get(backend, None),
+                linewidth=2,
+                markersize=6,
+                alpha=0.75 if is_simulated else 1.0,
+            )
 
         ax.set_title(title, fontsize=13)
         ax.set_xlabel(xlabel, fontsize=11)
         ax.set_ylabel("Latency (ms)", fontsize=11)
+        ax.set_yscale("symlog", linthresh=1.0)
         ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3)
+        ax.grid(True, which="minor", axis="y", alpha=0.15)
 
     out = output_path or (FIGURES_DIR / "latency_comparison.png")
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -150,16 +160,26 @@ def plot_backend_comparison(
         print("  [skip] backend_results.csv is empty or missing")
         return None
 
-    # Filter out unavailable backends
-    rows = [r for r in rows if r.get("measurement_type") != "unavailable"]
+    # Keep the main chart to real hardware so simulated NPU fallback does not
+    # visually dominate the CPU/GPU comparison used in the report.
+    excluded = [
+        r for r in rows
+        if r.get("measurement_type") == "unavailable"
+        or str(r.get("is_simulated", "")).lower() == "true"
+    ]
+    rows = [
+        r for r in rows
+        if r.get("measurement_type") != "unavailable"
+        and str(r.get("is_simulated", "")).lower() != "true"
+    ]
     if not rows:
-        print("  [skip] backend_results.csv has no available backend rows")
+        print("  [skip] backend_results.csv has no real hardware backend rows")
         return None
 
     fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
     fig.suptitle(
-        "Backend Performance Comparison - Average Latency\n"
-        "(unavailable backends excluded)",
+        "Real Backend Performance Comparison - Average Latency\n"
+        "(simulated/unavailable backends excluded from bars)",
         fontsize=14, fontweight="bold",
     )
 
@@ -182,6 +202,17 @@ def plot_backend_comparison(
     ax.set_ylabel("Average latency (ms)", fontsize=12)
     ax.set_xlabel("Backend policy", fontsize=12)
     ax.grid(axis="y", alpha=0.3)
+    if excluded:
+        excluded_names = ", ".join(str(r.get("backend", "unknown")) for r in excluded)
+        ax.text(
+            0.99, 0.02,
+            f"Excluded from bars: {excluded_names}",
+            transform=ax.transAxes,
+            ha="right",
+            va="bottom",
+            fontsize=9,
+            color="gray",
+        )
 
     out = output_path or (FIGURES_DIR / "backend_comparison.png")
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -207,7 +238,7 @@ def plot_resource_usage(
     mem_mb = data.get("memory_used_mb", 0)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5), constrained_layout=True)
-    fig.suptitle("System Resource Usage", fontsize=16, fontweight="bold")
+    fig.suptitle("System Resource Usage Snapshot (final sample)", fontsize=16, fontweight="bold")
 
     # CPU usage
     ax_cpu = axes[0]

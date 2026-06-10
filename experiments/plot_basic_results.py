@@ -73,7 +73,11 @@ def plot_matmul(output_path: Optional[Path] = None) -> Optional[Path]:
         return None
 
     fig, ax = plt.subplots(figsize=(9, 5), constrained_layout=True)
-    fig.suptitle("Matrix Multiplication Benchmark (FP32)", fontsize=15, fontweight="bold")
+    fig.suptitle(
+        "Matrix Multiplication Benchmark (FP32, log scale)",
+        fontsize=15,
+        fontweight="bold",
+    )
     for backend in sorted({r["backend"] for r in rows}):
         data = sorted([r for r in rows if r["backend"] == backend], key=lambda r: r["size"])
         ax.plot(
@@ -86,7 +90,9 @@ def plot_matmul(output_path: Optional[Path] = None) -> Optional[Path]:
         )
     ax.set_xlabel("Matrix size N (N x N)")
     ax.set_ylabel("Average latency (ms)")
+    ax.set_yscale("log")
     ax.grid(True, alpha=0.3)
+    ax.grid(True, which="minor", axis="y", alpha=0.15)
     ax.legend()
     out = output_path or (FIGURES_DIR / "matmul_benchmark.png")
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -102,7 +108,11 @@ def plot_precision(output_path: Optional[Path] = None) -> Optional[Path]:
         return None
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=True)
-    fig.suptitle("FP32 / FP16 Performance and Error", fontsize=15, fontweight="bold")
+    fig.suptitle(
+        "FP32 / FP16 Performance and Error (latency uses log scale)",
+        fontsize=15,
+        fontweight="bold",
+    )
 
     labels = [f"{r['backend']}\nN={r['size']}" for r in rows]
     x = list(range(len(rows)))
@@ -112,7 +122,9 @@ def plot_precision(output_path: Optional[Path] = None) -> Optional[Path]:
     axes[0].set_xticks(x)
     axes[0].set_xticklabels(labels, rotation=20, ha="right")
     axes[0].set_ylabel("Average latency (ms)")
+    axes[0].set_yscale("log")
     axes[0].grid(axis="y", alpha=0.3)
+    axes[0].grid(axis="y", which="minor", alpha=0.15)
     axes[0].legend()
 
     axes[1].bar(labels, [r["mean_abs_error"] for r in rows], color="#e15759")
@@ -192,7 +204,7 @@ def plot_energy(output_path: Optional[Path] = None) -> Optional[Path]:
     else:
         ax1.text(
             0.5, 0.12,
-            "ROCm power unavailable: run on AMD ROCm hardware with rocm-smi for energy data",
+            "No GPU power samples in current CSV: use as CPU/memory trace only",
             transform=ax1.transAxes,
             ha="center",
             fontsize=10,

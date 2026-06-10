@@ -50,6 +50,21 @@ def _read_csv(filename: str) -> List[Dict[str, Any]]:
     return rows
 
 
+def _is_rocm_gpu_row(row: Dict[str, Any]) -> bool:
+    device = str(row.get("device", "")).lower()
+    hip = str(row.get("torch_hip_version", ""))
+    probe = str(row.get("rocm_tensor_probe_ok", "")).lower()
+    return device == "cuda" and hip not in {"", "none", "N/A"} and probe == "true"
+
+
+def _format_time_label(seconds: float) -> str:
+    if seconds < 0.001:
+        return f"{seconds * 1000:.2f} ms"
+    if seconds < 1:
+        return f"{seconds * 1000:.1f} ms"
+    return f"{seconds:.2f} s"
+
+
 def plot_llm_generation_latency(output_path: Optional[Path] = None) -> Optional[Path]:
     rows = _read_csv("llm_generation_benchmark.csv")
     if not rows or all(r.get("query_id") == "SKIPPED" for r in rows):
@@ -62,9 +77,15 @@ def plot_llm_generation_latency(output_path: Optional[Path] = None) -> Optional[
         return None
 
     fig, ax = plt.subplots(figsize=(10, 5))
+    rocm_gpu = _is_rocm_gpu_row(data[0])
+    subtitle = (
+        "PyTorch HIP on AMD ROCm GPU; device is reported as 'cuda' by PyTorch"
+        if rocm_gpu
+        else "Local LLM benchmark; check CSV metadata for device/runtime"
+    )
     fig.suptitle(
         "Local LLM Generation Latency (Qwen3-1.7B)\n"
-        "Local LLM benchmark, not AMD GPU/NPU hardware benchmark",
+        f"{subtitle}",
         fontsize=13, fontweight="bold",
     )
 
@@ -76,7 +97,7 @@ def plot_llm_generation_latency(output_path: Optional[Path] = None) -> Optional[
     bars = ax.bar(x, gen_times, color="#4e79a7", edgecolor="white")
     for bar, val in zip(bars, gen_times):
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
-                f"{val:.1f}s", ha="center", va="bottom", fontsize=10)
+                _format_time_label(val), ha="center", va="bottom", fontsize=10)
 
     ax2 = ax.twinx()
     ax2.plot(x, tps, "ro-", markersize=8, label="tokens/s")
@@ -90,8 +111,15 @@ def plot_llm_generation_latency(output_path: Optional[Path] = None) -> Optional[
     ax.grid(axis="y", alpha=0.3)
 
     device = data[0].get("device", "unknown")
-    ax.annotate(f"Device: {device}", xy=(0.02, 0.95), xycoords="axes fraction",
-                fontsize=9, color="gray")
+    ax.annotate(
+        f"Device: {device}; NPU benchmark: no",
+        xy=(0.98, 0.06),
+        xycoords="axes fraction",
+        fontsize=9,
+        color="gray",
+        ha="right",
+        bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.75, "pad": 2},
+    )
 
     out = output_path or (FIGURES_DIR / "llm_generation_latency.png")
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -112,9 +140,11 @@ def plot_rag_mode_comparison(output_path: Optional[Path] = None) -> Optional[Pat
         return None
 
     fig, ax = plt.subplots(figsize=(8, 5))
+    rocm_gpu = any(_is_rocm_gpu_row(r) for r in data)
+    subtitle = "Local LLM uses AMD ROCm GPU; extractive mode is CPU/local retrieval" if rocm_gpu else "Check CSV metadata for runtime"
     fig.suptitle(
         "RAG Mode Comparison (Extractive vs Local LLM)\n"
-        "Local LLM benchmark, not AMD GPU/NPU hardware benchmark",
+        f"{subtitle}",
         fontsize=13, fontweight="bold",
     )
 
@@ -130,8 +160,16 @@ def plot_rag_mode_comparison(output_path: Optional[Path] = None) -> Optional[Pat
     ax.set_xticks(x)
     ax.set_xticklabels(modes, fontsize=10)
     ax.set_ylabel("Time (s)", fontsize=11)
+    ax.set_yscale("symlog", linthresh=0.01)
+    for xpos, val in zip([i - width / 2 for i in x], ingest):
+        if val > 0:
+            ax.text(xpos, val * 1.15, _format_time_label(float(val)), ha="center", fontsize=8)
+    for xpos, val in zip([i + width / 2 for i in x], query):
+        if val > 0:
+            ax.text(xpos, val * 1.08, _format_time_label(float(val)), ha="center", fontsize=8)
     ax.legend()
     ax.grid(axis="y", alpha=0.3)
+    ax.grid(axis="y", which="minor", alpha=0.15)
 
     out = output_path or (FIGURES_DIR / "rag_mode_comparison.png")
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -154,7 +192,7 @@ def plot_rag_stage_breakdown(output_path: Optional[Path] = None) -> Optional[Pat
     fig, ax = plt.subplots(figsize=(8, 5))
     fig.suptitle(
         "RAG Coarse Latency Breakdown (ingest / query)\n"
-        "Local LLM benchmark, not AMD GPU/NPU hardware benchmark",
+        "Local LLM uses AMD ROCm GPU when CSV device=cuda and HIP is present",
         fontsize=13, fontweight="bold",
     )
 
@@ -170,13 +208,21 @@ def plot_rag_stage_breakdown(output_path: Optional[Path] = None) -> Optional[Pat
         x_pos = [i - 0.15, i + 0.15]
         bars = ax.bar(x_pos, vals, 0.3, label=mode if i == 0 else "")
         for bar, val in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.1,
-                    f"{val:.2f}s", ha="center", fontsize=9)
+            if val > 0:
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    val * 1.15,
+                    _format_time_label(float(val)),
+                    ha="center",
+                    fontsize=9,
+                )
 
     ax.set_xticks(range(len(modes)))
     ax.set_xticklabels(modes, fontsize=10)
     ax.set_ylabel("Time (s)", fontsize=11)
+    ax.set_yscale("symlog", linthresh=0.01)
     ax.grid(axis="y", alpha=0.3)
+    ax.grid(axis="y", which="minor", alpha=0.15)
 
     out = output_path or (FIGURES_DIR / "rag_stage_breakdown.png")
     out.parent.mkdir(parents=True, exist_ok=True)
