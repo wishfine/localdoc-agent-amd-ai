@@ -28,12 +28,23 @@ if [ ! -f "$SCRIPT_DIR/scripts/bootstrap_python_env.sh" ]; then
     exit 1
 fi
 
-REQUIRE_GPU=0
+REQUIRE_GPU=1
+export LOCALDOC_REQUIRE_LLM_GPU=1
+export LOCALDOC_GRADIO_SHARE="${LOCALDOC_GRADIO_SHARE:-1}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --require-gpu|--require-llm-gpu)
             REQUIRE_GPU=1
             export LOCALDOC_REQUIRE_LLM_GPU=1
+            shift
+            ;;
+        --allow-cpu)
+            REQUIRE_GPU=0
+            unset LOCALDOC_REQUIRE_LLM_GPU
+            shift
+            ;;
+        --no-share)
+            export LOCALDOC_GRADIO_SHARE=0
             shift
             ;;
         *)
@@ -69,6 +80,7 @@ echo "  LOCALDOC_USE_LLM=$LOCALDOC_USE_LLM"
 echo "  LOCALDOC_LLM_MODEL_PATH=$LOCALDOC_LLM_MODEL_PATH"
 echo "  LOCALDOC_LLM_MAX_NEW_TOKENS=$LOCALDOC_LLM_MAX_NEW_TOKENS"
 echo "  LOCALDOC_REQUIRE_LLM_GPU=${LOCALDOC_REQUIRE_LLM_GPU:-0}"
+echo "  LOCALDOC_GRADIO_SHARE=${LOCALDOC_GRADIO_SHARE:-1}"
 echo "  Require GPU: $REQUIRE_GPU"
 echo ""
 

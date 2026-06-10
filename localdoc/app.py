@@ -4,8 +4,9 @@ LocalDoc Agent - Gradio Web Demo
 提供本地知识库智能体的 Web 界面。
 支持文档上传、智能查询（含调度日志）、系统信息查看和基准测试。
 
-设计为在 CPU 上即可运行，可选开启模拟 NPU 演示模式。
-可选接入本地 LLM (Qwen3-1.7B)，通过 LOCALDOC_USE_LLM=1 环境变量启用。
+设计为在 CPU 上即可运行；AMD 演示环境默认通过本地 Qwen3-1.7B
+在 ROCm GPU 上执行答案生成。
+本地 LLM 通过 LOCALDOC_USE_LLM=1 环境变量启用。
 所有 simulated backend 结果仅用于验证调度流程，不代表真实硬件性能。
 """
 
@@ -20,6 +21,40 @@ from localdoc.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
+def _truthy_env(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _use_llm() -> bool:
+    return _truthy_env("LOCALDOC_USE_LLM")
+
+
+def _require_llm_gpu() -> bool:
+    return _truthy_env("LOCALDOC_REQUIRE_LLM_GPU")
+
+
+def _default_model_path() -> Path:
+    return Path(__file__).resolve().parents[1] / "models" / "qwen3-1.7b"
+
+
+def _configure_default_runtime_for_main() -> None:
+    """
+    Direct `python -m localdoc.app` should behave like the final AMD demo:
+    use the local Qwen model on ROCm GPU when the model is present.
+    Scripts can still override this with explicit environment variables.
+    """
+    if "LOCALDOC_USE_LLM" not in os.environ and (_default_model_path() / "config.json").exists():
+        os.environ["LOCALDOC_USE_LLM"] = "1"
+        logger.info("Detected local Qwen model; enabling LOCALDOC_USE_LLM=1 by default.")
+
+    if _use_llm() and "LOCALDOC_REQUIRE_LLM_GPU" not in os.environ:
+        os.environ["LOCALDOC_REQUIRE_LLM_GPU"] = "1"
+        logger.info("LOCALDOC_USE_LLM=1; requiring ROCm GPU by default for app launch.")
+
+
 def _build_agent(simulate_npu: bool = False):
     """Create a LocalDocAgent with scheduler, optional LLM, and optional simulated NPU."""
     from localdoc.agent import LocalDocAgent
@@ -32,21 +67,36 @@ def _build_agent(simulate_npu: bool = False):
     backend = cpu  # default backend for agent
 
     # Check if local LLM is enabled via environment variable
-    use_llm = os.getenv("LOCALDOC_USE_LLM", "0") == "1"
+    use_llm = _use_llm()
     if use_llm:
         try:
             from localdoc.backends.local_llm_backend import LocalLLMBackend
             llm_backend = LocalLLMBackend()
             if llm_backend.is_available():
+                if _require_llm_gpu():
+                    info = llm_backend.get_device_info()
+                    if not info.get("rocm_tensor_probe_ok", False):
+                        raise RuntimeError(
+                            "LOCALDOC_REQUIRE_LLM_GPU=1 but ROCm GPU is not ready. "
+                            f"{info.get('hardware_note', '')}"
+                        )
                 backend = llm_backend
+                # The scheduler is a policy/logging layer. Register the LLM
+                # backend under "gpu" so generation traces reflect the ROCm GPU
+                # path used by LocalLLMBackend.generate_answer().
+                backends["gpu"] = llm_backend
                 logger.info("Local LLM backend enabled: %s", llm_backend.name)
             else:
-                logger.warning(
-                    "LOCALDOC_USE_LLM=1 but model not found at %s. "
-                    "Run: bash scripts/download_llm.sh",
-                    llm_backend.model_path,
+                message = (
+                    f"LOCALDOC_USE_LLM=1 but model not found at {llm_backend.model_path}. "
+                    "Run: bash scripts/download_llm.sh"
                 )
+                if _require_llm_gpu():
+                    raise RuntimeError(message)
+                logger.warning(message)
         except Exception as e:
+            if _require_llm_gpu():
+                raise
             logger.warning("Failed to load LocalLLMBackend: %s. Using CPU fallback.", e)
 
     if simulate_npu:
@@ -96,6 +146,36 @@ def _get_backend_status_report() -> str:
     # Simulated NPU
     lines.append("| SimulatedNPUBackend | 🎭 simulated only (demo) | NOT real hardware |")
 
+    # Local LLM backend
+    if _use_llm():
+        try:
+            from localdoc.backends.local_llm_backend import LocalLLMBackend
+            llm = LocalLLMBackend()
+            info = llm.get_device_info()
+            if not llm.is_available():
+                lines.append(
+                    f"| LocalLLMBackend | ⚠️ model missing | {llm.model_path} |"
+                )
+            elif _require_llm_gpu() and info.get("rocm_tensor_probe_ok"):
+                lines.append(
+                    "| LocalLLMBackend | ✅ ROCm GPU required and ready | "
+                    f"HIP {info.get('torch_hip_version')}, model loads lazily on first query |"
+                )
+            elif _require_llm_gpu():
+                lines.append(
+                    "| LocalLLMBackend | ❌ GPU required but not ready | "
+                    f"{info.get('hardware_note', 'ROCm probe failed')} |"
+                )
+            else:
+                lines.append(
+                    "| LocalLLMBackend | ✅ enabled | "
+                    f"{info.get('hardware_note', 'local LLM enabled')} |"
+                )
+        except Exception as exc:
+            lines.append(f"| LocalLLMBackend | ❌ failed | {type(exc).__name__}: {exc} |")
+    else:
+        lines.append("| LocalLLMBackend | disabled | set LOCALDOC_USE_LLM=1 |")
+
     header = "| Backend | Status | Detail |\n|---|---|---|\n"
     return header + "\n".join(lines)
 
@@ -135,6 +215,53 @@ def create_app():
 
     _agent = None
     _ingested_count = 0
+
+    def _runtime_intro() -> str:
+        if _use_llm() and _require_llm_gpu():
+            return """
+# 📚 LocalDoc Agent - 本地知识库智能体 (AMD AI MAX+)
+
+> **当前运行模式**：本地 Qwen3-1.7B 答案生成必须运行在 **AMD ROCm GPU** 上；
+> 如果 ROCm GPU 不可用，系统会直接报错，不会回落到 CPU。
+>
+> 文档加载、文本切块、TF-IDF 向量索引和轻量检索仍在本地 CPU 执行；
+> 这是端侧 RAG 流程的控制与轻量文本处理部分。
+>
+> SimulatedNPUBackend 仅用于演示调度逻辑，**不代表真实 AMD NPU 性能**。
+            """
+        if _use_llm():
+            return """
+# 📚 LocalDoc Agent - 本地知识库智能体 (AMD AI MAX+)
+
+> **当前运行模式**：本地 Qwen3-1.7B 生成后端已启用。
+> 如需强制 GPU，请使用 `LOCALDOC_REQUIRE_LLM_GPU=1` 或 `bash scripts/run_demo_llm.sh`。
+>
+> SimulatedNPUBackend 仅用于演示调度逻辑，**不代表真实 AMD NPU 性能**。
+            """
+        return """
+# 📚 LocalDoc Agent - 本地知识库智能体 (AMD AI MAX+)
+
+> **当前运行模式**：抽取式 CPU fallback。该模式用于基础功能演示。
+> AMD GPU LLM 演示请使用 `bash scripts/run_demo_llm.sh`。
+>
+> SimulatedNPUBackend 仅用于演示调度逻辑，**不代表真实 AMD NPU 性能**。
+        """
+
+    def _footer() -> str:
+        if _use_llm() and _require_llm_gpu():
+            return (
+                "*LocalDoc Agent v0.1 | 本地 Qwen3-1.7B 生成: ROCm GPU required | "
+                "SimulatedNPU 数据不代表真实硬件性能*"
+            )
+        if _use_llm():
+            return (
+                "*LocalDoc Agent v0.1 | 本地 Qwen3-1.7B 生成已启用 | "
+                "SimulatedNPU 数据不代表真实硬件性能*"
+            )
+        return (
+            "*LocalDoc Agent v0.1 | CPU fallback 基础模式 | "
+            "SimulatedNPU 数据不代表真实硬件性能*"
+        )
 
     def _ensure_agent(simulate_npu: bool):
         nonlocal _agent
@@ -270,19 +397,7 @@ def create_app():
         theme=gr.themes.Soft(),
     ) as app:
 
-        gr.Markdown(
-            """
-# 📚 LocalDoc Agent - 本地知识库智能体 (AMD AI MAX+)
-
-> **异构计算课程项目** | 面向 AMD 锐龙 AI MAX+ 平台的本地知识库智能体原型
->
-> ⚠️ 当前默认运行在 **CPU fallback 模式**。SimulatedNPUBackend 仅用于演示调度逻辑，
-> **不代表真实 AMD NPU 性能**。
->
-> 💡 可选：设置 `LOCALDOC_USE_LLM=1` 后启用本地 Qwen3-1.7B 生成后端。
-> 该后端完全本地运行，不调用云端 API。
-            """
-        )
+        gr.Markdown(_runtime_intro())
 
         with gr.Row():
             simulate_npu_toggle = gr.Checkbox(
@@ -355,11 +470,7 @@ def create_app():
                 )
 
         gr.Markdown(
-            """
----
-*LocalDoc Agent v0.1 | 异构计算课程实验 | 当前为 CPU fallback + simulated backend 模式*
-*所有 simulated backend 数据不代表真实 AMD 硬件性能*
-            """
+            "\n---\n" + _footer()
         )
 
     return app
@@ -368,8 +479,10 @@ def create_app():
 def main():
     """Launch the Gradio app."""
     logging.basicConfig(level=logging.INFO)
+    _configure_default_runtime_for_main()
     app = create_app()
-    app.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    share = _truthy_env("LOCALDOC_GRADIO_SHARE", default=True)
+    app.launch(server_name="0.0.0.0", server_port=7860, share=share)
 
 
 if __name__ == "__main__":

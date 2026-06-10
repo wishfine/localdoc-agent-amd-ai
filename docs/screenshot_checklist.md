@@ -71,6 +71,7 @@
 
 14. [建议] Gradio Web UI 演示页
     - 命令：`bash scripts/run_demo_llm.sh`
+    - 说明：该脚本默认 `LOCALDOC_REQUIRE_LLM_GPU=1` 且 `LOCALDOC_GRADIO_SHARE=1`，Qwen 不能跑到 ROCm GPU 时会直接失败。
     - 截图内容：上传文档、构建知识库、输入问题、返回答案、调度日志。
 
 15. [建议] 项目文件结构

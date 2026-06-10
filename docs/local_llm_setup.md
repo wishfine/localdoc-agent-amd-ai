@@ -90,7 +90,8 @@ python scripts/test_llm.py --require-gpu
 
 正常输出应包含：
 - 模型加载信息
-- 推理设备（CPU 或 GPU）
+- 推理设备 `cuda`
+- `ROCm tensor probe ok: True`
 - 问题和回答
 - 耗时和硬件说明
 
@@ -100,7 +101,8 @@ python scripts/test_llm.py --require-gpu
 bash scripts/run_demo_llm.sh
 ```
 
-访问 `http://localhost:7860`，上传文档后提问，系统将使用本地 Qwen3-1.7B 生成回答。
+该脚本默认要求 Qwen3-1.7B 运行在 ROCm GPU 上，并默认开启 Gradio `share=True`。
+访问 `http://localhost:7860` 或终端输出的 share 链接，上传文档后提问，系统将使用本地 Qwen3-1.7B 生成回答。
 
 ### 6. 运行 LLM Benchmark
 
@@ -109,6 +111,12 @@ bash scripts/run_llm_benchmark.sh
 ```
 
 生成 LLM 生成延迟和 RAG 模式对比的 CSV 和图表。
+
+AMD 课程实验建议使用：
+
+```bash
+bash scripts/run_llm_benchmark.sh --require-gpu
+```
 
 ## 环境变量
 
@@ -119,6 +127,8 @@ bash scripts/run_llm_benchmark.sh
 | `LOCALDOC_LLM_MODEL_ID` | `Qwen/Qwen3-1.7B` | Hugging Face 模型 ID |
 | `LOCALDOC_LLM_MAX_NEW_TOKENS` | `128` | 最大生成 token 数 |
 | `LOCALDOC_LLM_CONTEXT_CHARS` | `1600` | 最大上下文字符数 |
+| `LOCALDOC_REQUIRE_LLM_GPU` | `1` in `run_demo_llm.sh` | 设为 `1` 时禁止 Qwen CPU fallback |
+| `LOCALDOC_GRADIO_SHARE` | `1` in `run_demo_llm.sh` | 设为 `1` 时启用 Gradio share 链接 |
 
 ## 如果生成过慢
 

@@ -83,10 +83,13 @@ bash run_all_experiments.sh --allow-llm-hub --require-llm-gpu
 实验跑完后，如需截图 Web 演示页：
 
 ```bash
-bash scripts/run_demo_llm.sh --require-gpu
+bash scripts/run_demo_llm.sh
 ```
 
-打开平台转发的 `7860` 端口，截图上传文档、构建知识库、提问、LLM 回答和调度日志。
+该脚本默认要求 Qwen3-1.7B 运行在 ROCm GPU 上，并默认开启 Gradio `share=True`。
+打开平台转发的 `7860` 端口或终端输出的 Gradio share 链接，截图上传文档、构建知识库、提问、LLM 回答和调度日志。
+
+如果直接运行 `python -m localdoc.app`，只要 `models/qwen3-1.7b/config.json` 存在，应用也会默认启用本地 Qwen 并要求 ROCm GPU；如需仅做 CPU 抽取式基础演示，显式设置 `LOCALDOC_USE_LLM=0`。
 
 ### 4. 验证 ROCm 是否真实跑通
 
@@ -246,7 +249,7 @@ git push origin main
 | 只跑 Agent benchmark | `bash run_benchmark.sh --agent-only` |
 | 只跑本地 LLM/RAG benchmark | `bash scripts/run_llm_benchmark.sh` |
 | 强制本地 LLM 跑 GPU | `bash scripts/run_llm_benchmark.sh --require-gpu` |
-| 启动带本地 LLM 的 Web Demo | `bash scripts/run_demo_llm.sh --require-gpu` |
+| 启动带本地 LLM 的 Web Demo | `bash scripts/run_demo_llm.sh` |
 | 启动抽取式 Web Demo | `bash run_demo.sh` |
 | 修复/验证 ROCm tensor probe | `bash scripts/repair_rocm_runtime.sh && python experiments/check_environment.py` |
 | 单独检查环境 | `python experiments/check_environment.py` |
