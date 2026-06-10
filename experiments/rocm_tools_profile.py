@@ -61,6 +61,29 @@ def _resolve_any(names: Sequence[str]) -> tuple[Optional[str], str]:
     return None, names[0]
 
 
+def _resolve_python_executable(python_exe: str) -> str:
+    """Return an executable Python path for child tools such as rocprofv3."""
+    if python_exe:
+        path = Path(python_exe)
+        if path.is_absolute() and path.exists() and os.access(path, os.X_OK):
+            return str(path)
+        resolved = shutil.which(python_exe)
+        if resolved:
+            return resolved
+
+    for candidate in (sys.executable, "python3", "python"):
+        if not candidate:
+            continue
+        path = Path(candidate)
+        if path.is_absolute() and path.exists() and os.access(path, os.X_OK):
+            return str(path)
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+
+    return python_exe or "python3"
+
+
 def _display_command(command: Sequence[str], display_name: str) -> str:
     parts = [display_name, *command[1:]]
     return " ".join(parts)
@@ -328,9 +351,10 @@ def _run_rocprofv3_probe(results_dir: Path, python_exe: str, timeout_s: int) -> 
     probe_script = _small_rocm_probe_script(results_dir)
     profiler_dir = results_dir / "rocprofv3_probe"
     profiler_dir.mkdir(parents=True, exist_ok=True)
+    child_python = _resolve_python_executable(python_exe)
     command = _build_rocprofv3_probe_command(
         executable=executable,
-        python_exe=python_exe,
+        python_exe=child_python,
         probe_script=probe_script,
         profiler_dir=profiler_dir,
     )

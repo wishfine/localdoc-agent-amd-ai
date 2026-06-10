@@ -1,7 +1,10 @@
 from pathlib import Path
 
 from experiments.resource_monitor import _parse_rocm_power_watts
-from experiments.rocm_tools_profile import _build_rocprofv3_probe_command
+from experiments.rocm_tools_profile import (
+    _build_rocprofv3_probe_command,
+    _resolve_python_executable,
+)
 
 
 def test_parse_rocm_smi_power_watts_colon_format():
@@ -27,3 +30,8 @@ def test_rocprofv3_probe_command_uses_separator_before_application():
     separator_index = command.index("--")
     assert command[separator_index + 1 :] == ["python", "/tmp/probe.py"]
     assert "--runtime-trace" in command[:separator_index]
+
+
+def test_resolve_python_executable_falls_back_from_missing_python():
+    resolved = _resolve_python_executable("/definitely/missing/python")
+    assert Path(resolved).name.startswith("python")
