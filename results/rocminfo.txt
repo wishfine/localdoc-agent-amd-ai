@@ -1,5 +1,5 @@
 $ rocminfo
-# exit_code=0 duration_s=0.031
+# exit_code=0 duration_s=0.030
 
 [37mROCk module is loaded[0m
 =====================    

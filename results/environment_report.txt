@@ -1,6 +1,6 @@
 ============================================================
   LocalDoc Agent - 环境检查报告
-  生成时间: 2026-06-09 13:09:06
+  生成时间: 2026-06-10 10:06:54
 ============================================================
 
 ## Python 环境
@@ -17,8 +17,8 @@
 
 ## 内存信息
   total_memory_mb: 64069
-  available_memory_mb: 60364
-  memory_percent: 5.8
+  available_memory_mb: 60428
+  memory_percent: 5.7
   cpu_count: 32
 
 ## PyTorch 环境
@@ -34,10 +34,10 @@
   ROCm tensor probe note: ok 14.0
 
 ## ROCm 命令行工具证据
-  rocminfo: True -> /opt/workspace/localdoc-agent-amd-ai/results/rocminfo.txt
-  rocm-smi: True -> /opt/workspace/localdoc-agent-amd-ai/results/rocm_smi.txt
-  hipcc: True -> /opt/workspace/localdoc-agent-amd-ai/results/hipcc_version.txt
-  hipconfig: True -> /opt/workspace/localdoc-agent-amd-ai/results/hipconfig_full.txt
+  rocminfo: True -> /home/jovyan/localdoc-agent-amd-ai/results/rocminfo.txt
+  rocm-smi: True -> /home/jovyan/localdoc-agent-amd-ai/results/rocm_smi.txt
+  hipcc: True -> /home/jovyan/localdoc-agent-amd-ai/results/hipcc_version.txt
+  hipconfig: True -> /home/jovyan/localdoc-agent-amd-ai/results/hipconfig_full.txt
   gfx 架构: ['gfx11', 'gfx1151']
 
 ## ONNX Runtime 环境

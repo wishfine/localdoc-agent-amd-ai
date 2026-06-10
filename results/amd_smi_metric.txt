@@ -1,5 +1,5 @@
 $ amd-smi metric
-# exit_code=0 duration_s=0.142
+# exit_code=0 duration_s=0.160
 
 GPU: 0
     USAGE: N/A
@@ -12,7 +12,7 @@ GPU: 0
         POWER_MANAGEMENT: N/A
     CLOCK: N/A
     TEMPERATURE:
-        EDGE: 26 °C
+        EDGE: 28 °C
         HOTSPOT: N/A
         MEM: N/A
     PCIE:

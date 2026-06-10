@@ -1,10 +1,10 @@
 LocalDoc Agent full experiment manifest
-Generated at: 2026-06-09 13:10:21
+Generated at: 2026-06-10 10:09:29
 Command: bash run_all_experiments.sh --allow-llm-hub --require-llm-gpu
 
 [Environment]
 Python: Python 3.12.3
-CWD: /opt/workspace/localdoc-agent-amd-ai
+CWD: /home/jovyan/localdoc-agent-amd-ai
 
 [Key result files]
 OK  results/environment_report.txt
@@ -49,14 +49,21 @@ OK  figures/rag_stage_breakdown.png
  M figures/backend_comparison.png
  M figures/energy_comparison.png
  M figures/latency_comparison.png
+ M figures/llm_generation_latency.png
  M figures/matmul_benchmark.png
  M figures/mlp_training_curve.png
  M figures/precision_compare.png
+ M figures/rag_mode_comparison.png
+ M figures/rag_stage_breakdown.png
  M figures/resource_usage.png
+ M results/amd_smi_list.txt
+ M results/amd_smi_metric.txt
+ M results/amd_smi_static.txt
  M results/backend_results.csv
  M results/energy_summary.csv
  M results/environment_report.txt
- M results/hipcc_version.txt
+ M results/experiment_manifest.txt
+ M results/full_experiment_run.log
  M results/hipconfig_full.txt
  M results/latency_results.csv
  M results/llm_generation_benchmark.csv
@@ -64,24 +71,13 @@ OK  figures/rag_stage_breakdown.png
  M results/mlp_train_log.csv
  M results/power_trace.csv
  M results/precision_compare.csv
+ M results/rag_mode_comparison.csv
+ M results/rag_stage_breakdown.csv
  M results/resource_usage.csv
  M results/rocm_smi.txt
+ M results/rocm_smi_performance.txt
+ M results/rocm_tools_summary.csv
+ M results/rocm_tuning_recommendations.md
  M results/rocminfo.txt
+ M results/rocprofiler_run.txt
  M results/vertical_demo_transcript.csv
-?? core
-?? figures/llm_generation_latency.png
-?? figures/rag_mode_comparison.png
-?? figures/rag_stage_breakdown.png
-?? results/amd_smi_list.txt
-?? results/amd_smi_metric.txt
-?? results/amd_smi_static.txt
-?? results/experiment_manifest.txt
-?? results/full_experiment_run.log
-?? results/rag_mode_comparison.csv
-?? results/rag_stage_breakdown.csv
-?? results/rocm_bandwidth_test.txt
-?? results/rocm_smi_performance.txt
-?? results/rocm_tools_summary.csv
-?? results/rocm_tuning_recommendations.md
-?? results/rocprofiler_run.txt
-?? results/rocprofiler_tools.txt

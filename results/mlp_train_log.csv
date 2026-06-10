@@ -1,16 +1,16 @@
 experiment,backend,device,backend_library,available,measurement_type,dtype,epoch,samples,batch_size,loss,accuracy,epoch_time_ms,samples_per_second,note,max_memory_allocated_mb,torch_version,torch_hip_version
-mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,1,1024,128,1.071814,0.501953,1.3975,732717.6,Real CPU NumPy MLP training with forward/backward/update,,,
-mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,2,1024,128,1.051276,0.581055,0.5513,1857421.21,Real CPU NumPy MLP training with forward/backward/update,,,
-mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,3,1024,128,1.028154,0.650391,0.3011,3401380.73,Real CPU NumPy MLP training with forward/backward/update,,,
-mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,4,1024,128,1.001043,0.702148,0.3167,3233211.09,Real CPU NumPy MLP training with forward/backward/update,,,
-mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,5,1024,128,0.968593,0.75293,0.301,3401843.78,Real CPU NumPy MLP training with forward/backward/update,,,
-mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,1,1024,128,1.078651,0.414062,1049.9207,975.31,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
-mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,2,1024,128,1.025704,0.539062,194.7935,5256.85,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
-mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,3,1024,128,0.976549,0.631836,5.0452,202965.37,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
-mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,4,1024,128,0.927027,0.683594,202.4172,5058.86,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
-mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,5,1024,128,0.875841,0.737305,3.2544,314654.53,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
-mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,1,1024,128,1.0788,0.416992,322.5287,3174.91,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
-mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,2,1024,128,1.02573,0.541992,6.2785,163096.38,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
-mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,3,1024,128,0.976409,0.625977,4.5363,225733.45,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
-mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,4,1024,128,0.926851,0.69043,4.5486,225122.88,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
-mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,5,1024,128,0.875732,0.727539,4.5293,226084.96,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,1,1024,128,1.071814,0.501953,0.5984,1711247.54,Real CPU NumPy MLP training with forward/backward/update,,,
+mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,2,1024,128,1.051276,0.581055,0.3198,3202002.51,Real CPU NumPy MLP training with forward/backward/update,,,
+mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,3,1024,128,1.028154,0.650391,0.2933,3490939.77,Real CPU NumPy MLP training with forward/backward/update,,,
+mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,4,1024,128,1.001043,0.702148,0.3043,3364633.1,Real CPU NumPy MLP training with forward/backward/update,,,
+mlp_train,CPU,numpy_cpu,numpy,True,real_cpu,fp32,5,1024,128,0.968593,0.75293,0.2976,3440408.74,Real CPU NumPy MLP training with forward/backward/update,,,
+mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,1,1024,128,1.078651,0.414062,7.2116,141993.89,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,2,1024,128,1.025704,0.539062,1.3092,782181.41,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,3,1024,128,0.976549,0.631836,1.2526,817484.71,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,4,1024,128,0.927027,0.683594,1.227,834544.88,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,fp32,5,1024,128,0.875841,0.737305,1.2208,838763.85,Real Torch_CPU MLP training via PyTorch,,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,1,1024,128,1.0788,0.416992,492.6721,2078.46,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,2,1024,128,1.02573,0.541992,3.8248,267725.36,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,3,1024,128,0.976409,0.625977,2.4491,418109.21,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,4,1024,128,0.926851,0.69043,2.3795,430351.55,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d
+mlp_train,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,fp32,5,1024,128,0.875732,0.727539,2.3437,436919.15,Real ROCm_GPU MLP training via PyTorch,140.68,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d

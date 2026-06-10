@@ -20,7 +20,7 @@ hip-clang-ldflags :
 --driver-mode=g++ -O3 --hip-link
 
 == Environment Variables
-PATH =/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+PATH =/usr/lib/code-server/lib/vscode/bin/remote-cli:/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 LD_LIBRARY_PATH=/opt/rocm/lib
 HIP_DEVICE_LIB_PATH=/opt/rocm/lib/llvm/amdgcn/bitcode
 

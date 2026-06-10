@@ -1,17 +1,18 @@
 $ rocm-smi --showproductname --showpower --showmeminfo vram --showclocks --showuse --showtemp
-# exit_code=0 duration_s=0.070
+# exit_code=0 duration_s=0.066
 
 
 
 ============================ ROCm System Management Interface ============================
 ====================================== Temperature =======================================
-GPU[0]		: Temperature (Sensor edge) (C): 26.0
+GPU[0]		: Temperature (Sensor edge) (C): 28.0
 ==========================================================================================
 =============================== Current clock frequencies ================================
-GPU[0]		: sclk clock level: 1: (704Mhz)
+GPU[0]		: mclk clock level: 2: (1000Mhz)
+GPU[0]		: sclk clock level: 1: (701Mhz)
 ==========================================================================================
 =================================== Power Consumption ====================================
-GPU[0]		: Current Socket Graphics Package Power (W): 23.08
+GPU[0]		: Current Socket Graphics Package Power (W): 25.068
 ==========================================================================================
 =================================== % time GPU is busy ===================================
 GPU[0]		: GPU use (%): 1

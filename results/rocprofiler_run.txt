@@ -1,8 +1,19 @@
-$ rocprofv3 --runtime-trace --kernel-trace --memory-copy-trace --stats --summary --output-format csv --output-directory /opt/workspace/localdoc-agent-amd-ai/results/rocprofv3_probe python /tmp/tmpxx6yuqn8_rocprofv3_probe.py
-# exit_code=2 duration_s=0.032
+$ rocprofv3 --runtime-trace --kernel-trace --memory-copy-trace --stats --summary --output-format csv --output-directory /home/jovyan/localdoc-agent-amd-ai/results/rocprofv3_probe -- python /tmp/tmp6af58z9y_rocprofv3_probe.py
+# exit_code=1 duration_s=0.026
 # generated_files_under_results:
 (none)
 
-usage: rocprofv3 [options] -- <application> [application options]
-rocprofv3: error: unrecognized arguments: python /tmp/tmpxx6yuqn8_rocprofv3_probe.py
+Traceback (most recent call last):
+  File "/opt/rocm/bin/rocprofv3", line 1962, in <module>
+    ec = main(sys.argv[1:])
+         ^^^^^^^^^^^^^^^^^^
+  File "/opt/rocm/bin/rocprofv3", line 1909, in main
+    ec = run(app_args, args, pass_id=pass_idx)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/rocm/bin/rocprofv3", line 1790, in run
+    os.execvpe(app_args[0], app_args, env=app_env)
+  File "<frozen os>", line 589, in execvpe
+  File "<frozen os>", line 622, in _execvpe
+  File "<frozen os>", line 613, in _execvpe
+FileNotFoundError: [Errno 2] No such file or directory: b'/bin/python'
 

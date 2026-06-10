@@ -2,7 +2,7 @@
 
 ============================ ROCm System Management Interface ============================
 =================================== Power Consumption ====================================
-GPU[0]		: Current Socket Graphics Package Power (W): 23.011
+GPU[0]		: Current Socket Graphics Package Power (W): 29.086
 ==========================================================================================
 ================================== Memory Usage (Bytes) ==================================
 GPU[0]		: VRAM Total Memory (B): 68719476736

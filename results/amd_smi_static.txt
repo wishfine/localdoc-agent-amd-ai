@@ -1,5 +1,5 @@
 $ amd-smi static
-# exit_code=0 duration_s=0.156
+# exit_code=0 duration_s=0.155
 
 GPU: 0
     ASIC:
@@ -123,12 +123,23 @@ GPU: 0
                     VALUE: 600
                     UNIT: MHz
                 LEVEL 1:
-                    VALUE: 709
+                    VALUE: 711
                     UNIT: MHz
                 LEVEL 2:
                     VALUE: 2900
                     UNIT: MHz
-        MEM: N/A
+        MEM:
+            CURRENT_LEVEL: 2
+            FREQUENCY_LEVELS:
+                LEVEL 0:
+                    VALUE: 400
+                    UNIT: MHz
+                LEVEL 1:
+                    VALUE: 800
+                    UNIT: MHz
+                LEVEL 2:
+                    VALUE: 1000
+                    UNIT: MHz
         DF: N/A
         SOC: N/A
         DCEF: N/A
