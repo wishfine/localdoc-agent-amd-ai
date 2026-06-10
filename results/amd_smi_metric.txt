@@ -1,5 +1,5 @@
 $ amd-smi metric
-# exit_code=0 duration_s=0.160
+# exit_code=0 duration_s=0.143
 
 GPU: 0
     USAGE: N/A
@@ -12,7 +12,7 @@ GPU: 0
         POWER_MANAGEMENT: N/A
     CLOCK: N/A
     TEMPERATURE:
-        EDGE: 28 °C
+        EDGE: 29 °C
         HOTSPOT: N/A
         MEM: N/A
     PCIE:
@@ -56,14 +56,14 @@ GPU: 0
     ENERGY: N/A
     MEM_USAGE:
         TOTAL_VRAM: 65536 MB
-        USED_VRAM: 147 MB
-        FREE_VRAM: 65389 MB
+        USED_VRAM: 4004 MB
+        FREE_VRAM: 61532 MB
         TOTAL_VISIBLE_VRAM: 65536 MB
-        USED_VISIBLE_VRAM: 147 MB
-        FREE_VISIBLE_VRAM: 65389 MB
+        USED_VISIBLE_VRAM: 4004 MB
+        FREE_VISIBLE_VRAM: 61532 MB
         TOTAL_GTT: 32034 MB
-        USED_GTT: 14 MB
-        FREE_GTT: 32020 MB
+        USED_GTT: 20 MB
+        FREE_GTT: 32014 MB
     THROTTLE:
         ACCUMULATION_COUNTER: N/A
         PROCHOT_ACCUMULATED: N/A

@@ -1,7 +1,7 @@
 experiment,backend,device,backend_library,available,measurement_type,size,repeats,fp32_ms,fp16_ms,speedup_fp16_vs_fp32,max_abs_error,mean_abs_error,relative_l2_error,note,torch_version,torch_hip_version,speedup_fp32_vs_torch_cpu
-precision_compare,CPU,numpy_cpu,numpy,True,real_cpu,256,3,18.0016,41.3776,0.4351,0.03914642,0.00450582,0.00035971,Real CPU NumPy precision comparison,,,
-precision_compare,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,256,3,0.0511,10.3025,0.005,0.03914642,0.00450691,0.0003598,Real CPU PyTorch FP32/FP16 comparison,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,
-precision_compare,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,256,3,0.0778,0.0995,0.7814,0.03035355,0.00446589,0.0003579,Real ROCm GPU FP32/FP16 comparison via PyTorch HIP,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,0.6572
-precision_compare,CPU,numpy_cpu,numpy,True,real_cpu,512,3,0.2663,317.0827,0.0008,0.04693604,0.00640759,0.00036059,Real CPU NumPy precision comparison,,,
-precision_compare,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,512,3,3.0072,83.5342,0.036,0.04693604,0.00640747,0.00036058,Real CPU PyTorch FP32/FP16 comparison,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,
-precision_compare,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,512,3,0.2356,0.0452,5.2118,0.05236053,0.0063878,0.00035957,Real ROCm GPU FP32/FP16 comparison via PyTorch HIP,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,12.7653
+precision_compare,CPU,numpy_cpu,numpy,True,real_cpu,256,3,10.3346,40.2258,0.2569,0.03914642,0.00450582,0.00035971,Real CPU NumPy precision comparison,,,
+precision_compare,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,256,3,0.2655,10.2895,0.0258,0.03914642,0.00450691,0.0003598,Real CPU PyTorch FP32/FP16 comparison,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,
+precision_compare,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,256,3,0.0981,0.0856,1.147,0.03035355,0.00446589,0.0003579,Real ROCm GPU FP32/FP16 comparison via PyTorch HIP,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,2.7053
+precision_compare,CPU,numpy_cpu,numpy,True,real_cpu,512,3,0.2933,320.8242,0.0009,0.04693604,0.00640759,0.00036059,Real CPU NumPy precision comparison,,,
+precision_compare,Torch_CPU,torch_cpu,pytorch,True,real_torch_cpu,512,3,0.5611,90.9481,0.0062,0.04693604,0.00640747,0.00036058,Real CPU PyTorch FP32/FP16 comparison,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,
+precision_compare,ROCm_GPU,Radeon 8060S Graphics,pytorch,True,real_rocm_gpu,512,3,0.2415,0.0464,5.2087,0.05236053,0.0063878,0.00035957,Real ROCm GPU FP32/FP16 comparison via PyTorch HIP,2.9.1+rocm7.12.0,7.12.60610-2bd1678d3d,2.3236

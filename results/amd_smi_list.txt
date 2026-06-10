@@ -1,5 +1,5 @@
 $ amd-smi list
-# exit_code=0 duration_s=0.130
+# exit_code=0 duration_s=0.131
 
 GPU: 0
     BDF: 0000:c3:00.0

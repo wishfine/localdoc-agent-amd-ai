@@ -1,12 +1,12 @@
 # ROCm 工具性能检测与调优记录
 
-生成时间：2026-06-10T10:06:55
+生成时间：2026-06-10T10:24:48
 
 ## 工具覆盖情况
 
 - 已检测到的工具：rocminfo, amd-smi list, amd-smi static, amd-smi metric, rocm-smi, rocprofiler tools, rocprofv3 probe
 - 未检测到或未安装的工具：rocm-bandwidth-test
-- 命令非零退出或超时：rocprofiler tools, rocprofv3 probe
+- 命令非零退出或超时：rocprofiler tools
 
 ## 本项目如何使用 ROCm 工具
 

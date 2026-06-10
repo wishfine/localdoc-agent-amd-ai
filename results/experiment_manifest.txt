@@ -1,5 +1,5 @@
 LocalDoc Agent full experiment manifest
-Generated at: 2026-06-10 10:09:29
+Generated at: 2026-06-10 10:25:47
 Command: bash run_all_experiments.sh --allow-llm-hub --require-llm-gpu
 
 [Environment]
@@ -51,7 +51,6 @@ OK  figures/rag_stage_breakdown.png
  M figures/latency_comparison.png
  M figures/llm_generation_latency.png
  M figures/matmul_benchmark.png
- M figures/mlp_training_curve.png
  M figures/precision_compare.png
  M figures/rag_mode_comparison.png
  M figures/rag_stage_breakdown.png
@@ -64,7 +63,6 @@ OK  figures/rag_stage_breakdown.png
  M results/environment_report.txt
  M results/experiment_manifest.txt
  M results/full_experiment_run.log
- M results/hipconfig_full.txt
  M results/latency_results.csv
  M results/llm_generation_benchmark.csv
  M results/matmul_benchmark.csv
@@ -81,3 +79,5 @@ OK  figures/rag_stage_breakdown.png
  M results/rocminfo.txt
  M results/rocprofiler_run.txt
  M results/vertical_demo_transcript.csv
+?? .gradio/
+?? results/rocprofv3_probe/
