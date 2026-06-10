@@ -237,6 +237,29 @@ print("probe_output_norm=", float(c.float().norm().detach().cpu()))
     return probe_path
 
 
+def _build_rocprofv3_probe_command(
+    executable: str,
+    python_exe: str,
+    probe_script: Path,
+    profiler_dir: Path,
+) -> List[str]:
+    return [
+        executable,
+        "--runtime-trace",
+        "--kernel-trace",
+        "--memory-copy-trace",
+        "--stats",
+        "--summary",
+        "--output-format",
+        "csv",
+        "--output-directory",
+        str(profiler_dir),
+        "--",
+        python_exe,
+        str(probe_script),
+    ]
+
+
 def _collect_profiler_help(results_dir: Path) -> Dict[str, Any]:
     output_path = results_dir / "rocprofiler_tools.txt"
     sections: List[str] = []
@@ -305,20 +328,12 @@ def _run_rocprofv3_probe(results_dir: Path, python_exe: str, timeout_s: int) -> 
     probe_script = _small_rocm_probe_script(results_dir)
     profiler_dir = results_dir / "rocprofv3_probe"
     profiler_dir.mkdir(parents=True, exist_ok=True)
-    command = [
-        executable,
-        "--runtime-trace",
-        "--kernel-trace",
-        "--memory-copy-trace",
-        "--stats",
-        "--summary",
-        "--output-format",
-        "csv",
-        "--output-directory",
-        str(profiler_dir),
-        python_exe,
-        str(probe_script),
-    ]
+    command = _build_rocprofv3_probe_command(
+        executable=executable,
+        python_exe=python_exe,
+        probe_script=probe_script,
+        profiler_dir=profiler_dir,
+    )
     started = time.perf_counter()
     try:
         proc = subprocess.run(

@@ -42,6 +42,36 @@ def _psutil_stats() -> Dict[str, Any]:
         }
 
 
+def _parse_rocm_power_watts(output: str) -> List[float]:
+    """Extract watt readings from common rocm-smi power output formats."""
+    watts: List[float] = []
+    for line in output.splitlines():
+        if "power" not in line.lower():
+            continue
+
+        # Older tools often print "23.08 W"; newer ROCm SMI prints
+        # "Current Socket Graphics Package Power (W): 23.08".
+        line_watts: List[float] = []
+        for match in re.findall(r"([0-9]+(?:\.[0-9]+)?)\s*W\b", line, flags=re.IGNORECASE):
+            line_watts.append(float(match))
+        for match in re.findall(r"\(W\)\s*:\s*([0-9]+(?:\.[0-9]+)?)", line, flags=re.IGNORECASE):
+            line_watts.append(float(match))
+        for match in re.findall(r"\bPower\s*:\s*([0-9]+(?:\.[0-9]+)?)", line, flags=re.IGNORECASE):
+            line_watts.append(float(match))
+        for value in line_watts:
+            if value not in watts:
+                watts.append(value)
+    return watts
+
+
+def _first_relevant_rocm_line(output: str) -> str:
+    for line in output.splitlines():
+        stripped = line.strip()
+        if stripped and ("power" in stripped.lower() or "gpu[" in stripped.lower()):
+            return stripped
+    return output.strip().splitlines()[0] if output.strip() else "no watt reading"
+
+
 def _read_rocm_power() -> tuple[Optional[float], str]:
     if shutil.which("rocm-smi") is None:
         return None, "rocm-smi not found"
@@ -57,9 +87,9 @@ def _read_rocm_power() -> tuple[Optional[float], str]:
         return None, f"rocm-smi failed: {type(exc).__name__}: {exc}"
 
     output = (proc.stdout or "") + (proc.stderr or "")
-    watts = [float(x) for x in re.findall(r"([0-9]+(?:\.[0-9]+)?)\s*W", output)]
+    watts = _parse_rocm_power_watts(output)
     if not watts:
-        return None, output.strip().splitlines()[0] if output.strip() else "no watt reading"
+        return None, _first_relevant_rocm_line(output)
     return sum(watts) / len(watts), "rocm-smi --showpower"
 
 

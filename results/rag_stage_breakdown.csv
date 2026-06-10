@@ -1,5 +1,5 @@
 mode,stage,time_s,is_local_llm,note
 extractive,ingest,0.0009,False,Extractive mode; not LLM. Not AMD hardware benchmark.
 extractive,query,0.0006,False,Extractive mode; not LLM. Not AMD hardware benchmark.
-local_llm_qwen3,ingest,0.0016,True,Local LLM inference only; not AMD GPU/NPU hardware benchmark.
-local_llm_qwen3,query,13.4305,True,Local LLM inference only; not AMD GPU/NPU hardware benchmark.
+local_llm_qwen3,ingest,0.0016,True,Local LLM inference on ROCm GPU; not NPU benchmark.
+local_llm_qwen3,query,13.4305,True,Local LLM inference on ROCm GPU; not NPU benchmark.

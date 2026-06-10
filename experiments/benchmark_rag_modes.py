@@ -118,7 +118,11 @@ def run_llm_mode():
         "answer_preview": result["answer"][:80],
         "chunks_ingested": n,
         "device": info["device"],
+        "torch_cuda_available": info["torch_cuda_available"],
         "torch_hip_version": info["torch_hip_version"] or "N/A",
+        "rocm_tensor_probe_ok": info["rocm_tensor_probe_ok"],
+        "rocm_tensor_probe_note": info["rocm_tensor_probe_note"] or "",
+        "is_rocm_runtime_detected": info["is_rocm_runtime_detected"],
         "is_amd_hardware_benchmark": info["is_amd_hardware_benchmark"],
     }
 
@@ -180,6 +184,9 @@ def main():
         "device": "cpu",
         "torch_cuda_available": False,
         "torch_hip_version": "N/A",
+        "rocm_tensor_probe_ok": False,
+        "rocm_tensor_probe_note": "N/A",
+        "is_rocm_runtime_detected": False,
         "is_local_llm": False,
         "is_amd_hardware_benchmark": False,
         "note": "Extractive mode; not LLM. Not AMD hardware benchmark.",
@@ -207,9 +214,12 @@ def main():
             "device": llm_result["device"],
             "torch_cuda_available": llm_result.get("torch_cuda_available", False),
             "torch_hip_version": llm_result.get("torch_hip_version", "N/A"),
+            "rocm_tensor_probe_ok": llm_result.get("rocm_tensor_probe_ok", False),
+            "rocm_tensor_probe_note": llm_result.get("rocm_tensor_probe_note", ""),
+            "is_rocm_runtime_detected": llm_result.get("is_rocm_runtime_detected", False),
             "is_local_llm": True,
             "is_amd_hardware_benchmark": llm_result.get("is_amd_hardware_benchmark", False),
-            "note": "Local LLM inference only; not AMD GPU/NPU hardware benchmark.",
+            "note": "Local LLM inference; device column records CPU/ROCm GPU execution. Not NPU benchmark.",
         })
     else:
         rows.append({
@@ -224,6 +234,9 @@ def main():
             "device": "N/A",
             "torch_cuda_available": "N/A",
             "torch_hip_version": "N/A",
+            "rocm_tensor_probe_ok": "N/A",
+            "rocm_tensor_probe_note": "N/A",
+            "is_rocm_runtime_detected": "N/A",
             "is_local_llm": True,
             "is_amd_hardware_benchmark": False,
             "note": "Model not found. Skipped. Not AMD hardware benchmark.",
